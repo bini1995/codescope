@@ -244,7 +244,7 @@ export async function registerRoutes(
       const octokit = await getUncachableGitHubClient();
       const repo = await octokit.repos.createForAuthenticatedUser({
         name: parsed.data.name,
-        description: parsed.data.description || "Code audit project created by CodeScope",
+        description: parsed.data.description || "Code audit project created by CodeAudit",
         private: parsed.data.isPrivate ?? false,
         auto_init: true,
       });

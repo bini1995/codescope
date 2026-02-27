@@ -53,7 +53,7 @@ export default function Dashboard() {
                 <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
                   <Code2 className="w-4 h-4 text-primary-foreground" />
                 </div>
-                <span className="font-semibold text-lg tracking-tight">CodeScope</span>
+                <span className="font-semibold text-lg tracking-tight">CodeAudit</span>
               </div>
             </Link>
             <span className="text-border">/</span>

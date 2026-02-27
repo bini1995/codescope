@@ -202,7 +202,7 @@ export default function AuditDetail() {
                 <div className="w-6 h-6 rounded bg-primary flex items-center justify-center">
                   <Code2 className="w-3.5 h-3.5 text-primary-foreground" />
                 </div>
-                <span className="font-semibold tracking-tight">CodeScope</span>
+                <span className="font-semibold tracking-tight">CodeAudit</span>
               </div>
             </Link>
             <span className="text-border">/</span>

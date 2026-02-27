@@ -15,12 +15,19 @@ import {
   ArrowRight,
   Code2,
   AlertTriangle,
-  FileSearch,
   ChevronRight,
   Scan,
   GitFork,
   Lock,
   Globe,
+  CheckCircle2,
+  Users,
+  FileText,
+  Video,
+  BookOpen,
+  Target,
+  Rocket,
+  Check,
 } from "lucide-react";
 
 type GHRepo = {
@@ -86,36 +93,104 @@ export default function Landing() {
     setShowRepos(false);
   };
 
-  const features = [
+  const valueBlocks = [
     {
       icon: <Shield className="w-5 h-5" />,
-      title: "Security Scan",
-      desc: "Detects exposed secrets, hardcoded API keys, SQL injection patterns, unsafe CORS, and missing auth middleware",
+      title: "Security & Data Leakage",
+      desc: "Hardcoded secrets, auth holes, exposed uploads, SQL injection, unsafe CORS configurations",
+      impact: "Prevent breaches & compliance issues",
     },
     {
       icon: <Zap className="w-5 h-5" />,
-      title: "Stability Analysis",
-      desc: "Finds hallucinated packages, missing lockfiles, version conflicts, and broken import paths",
+      title: "Stability Risks",
+      desc: "Broken dependencies, hallucinated libraries, missing lockfiles, version conflicts",
+      impact: "Avoid crashes & runtime failures",
     },
     {
       icon: <Wrench className="w-5 h-5" />,
-      title: "Code Quality",
-      desc: "Identifies mega-files, dead code, missing validation, duplicate patterns, and TODO/HACK comments",
+      title: "Maintainability Issues",
+      desc: "Mega-files, duplicate code, missing validation, dead code, TODO/HACK patterns",
+      impact: "Make your code easier to change",
     },
     {
       icon: <TrendingUp className="w-5 h-5" />,
-      title: "Scalability Check",
-      desc: "Spots N+1 queries, missing caching, synchronous bottlenecks, and no rate limiting",
+      title: "Scalability Problems",
+      desc: "N+1 queries, missing caching, synchronous bottlenecks, no rate limiting",
+      impact: "Prevent slowdowns at growth",
     },
     {
       icon: <GitBranch className="w-5 h-5" />,
-      title: "CI/CD Assessment",
-      desc: "Checks for GitHub Actions workflows, branch protection, automated testing, and deployment safety",
+      title: "CI/CD Weaknesses",
+      desc: "No automated checks, missing GitHub Actions, no branch protection, no deployment safety",
+      impact: "Reduce deployment risk",
     },
     {
       icon: <Scan className="w-5 h-5" />,
-      title: "Automated Scanning",
-      desc: "Pattern-based detection across 80+ files with line-level evidence and actionable fix steps",
+      title: "Automated Pattern Detection",
+      desc: "Pattern-based detection across 80+ files with line-level evidence and severity ranking",
+      impact: "Find issues humans miss",
+    },
+  ];
+
+  const audienceList = [
+    "Indie hackers & solo founders",
+    "Bootstrapped SaaS teams",
+    "AI/ML built MVPs",
+    "Vibe-coded platforms",
+    "Early-stage startups ready to scale",
+  ];
+
+  const trustTools = [
+    "Semgrep",
+    "Gitleaks",
+    "NPM Audit",
+    "ESLint",
+    "GitHub Actions",
+    "Pattern Analysis",
+  ];
+
+  const pricingTiers = [
+    {
+      name: "Starter",
+      price: "$750",
+      desc: "Full automated code audit with prioritized findings",
+      features: [
+        "Full codebase security scan",
+        "Executive summary report",
+        "Prioritized findings list",
+        "Severity-ranked issues",
+        "Business impact analysis",
+      ],
+      cta: "Get Started",
+      popular: false,
+    },
+    {
+      name: "Pro",
+      price: "$1,500",
+      desc: "Everything in Starter plus CI setup and fix PRs",
+      features: [
+        "All Starter features",
+        "CI baseline + GitHub Actions config",
+        "Top 2 PR fixes submitted",
+        "14-day remediation roadmap",
+        "Detailed code evidence",
+      ],
+      cta: "Go Pro",
+      popular: true,
+    },
+    {
+      name: "Premium",
+      price: "$3,500",
+      desc: "Full-service audit with hands-on remediation",
+      features: [
+        "All Pro features",
+        "5 PR fixes submitted",
+        "1:1 review call",
+        "Loom walkthrough recording",
+        "Priority turnaround (24h)",
+      ],
+      cta: "Go Premium",
+      popular: false,
     },
   ];
 
@@ -127,14 +202,17 @@ export default function Landing() {
             <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
               <Code2 className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="font-semibold text-lg tracking-tight" data-testid="text-logo">CodeScope</span>
+            <span className="font-semibold text-lg tracking-tight" data-testid="text-logo">CodeAudit</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} data-testid="link-dashboard">
+          <div className="flex items-center gap-1 sm:gap-2">
+            <Button variant="ghost" size="sm" onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })} data-testid="link-pricing" className="text-xs sm:text-sm">
+              Pricing
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} data-testid="link-dashboard" className="text-xs sm:text-sm">
               Dashboard
             </Button>
             <Button size="sm" onClick={() => document.getElementById("intake-form")?.scrollIntoView({ behavior: "smooth" })} data-testid="button-get-audit">
-              Scan Repo
+              Get Audit
               <ArrowRight className="w-3.5 h-3.5 ml-1" />
             </Button>
           </div>
@@ -145,32 +223,54 @@ export default function Landing() {
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/50 px-3 py-1 mb-6">
             <AlertTriangle className="w-3.5 h-3.5 text-yellow-500" />
-            <span className="text-xs text-muted-foreground">Built with AI? Your code has hidden risks.</span>
+            <span className="text-xs text-muted-foreground">Built with AI? Vibe-coded? Your code has hidden risks.</span>
           </div>
 
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] mb-6">
-            Find what's broken
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] mb-6" data-testid="text-hero-title">
+            Audit your codebase for
             <br />
             <span className="bg-gradient-to-r from-primary via-blue-400 to-cyan-400 bg-clip-text text-transparent">
-              before your users do
+              security, stability & growth risks
             </span>
           </h1>
 
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-            Automated code audits for AI-generated and fast-shipped codebases.
-            Paste your GitHub repo URL, get a full security and quality scan with
-            severity-ranked findings and fix steps in minutes.
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-6 leading-relaxed" data-testid="text-hero-subtitle">
+            Professional codebase audits for AI-built SaaS & vibe-coded startups.
+            Find and fix real flaws before they break your product.
           </p>
 
-          <div className="flex items-center justify-center gap-3 flex-wrap">
+          <p className="text-sm text-muted-foreground/70 mb-8">
+            Stop guesswork. Know where your code breaks before your users do.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-12">
             <Button size="lg" onClick={() => document.getElementById("intake-form")?.scrollIntoView({ behavior: "smooth" })} data-testid="button-start-audit">
-              Scan Your Repo
+              Start Your Audit
               <ArrowRight className="w-4 h-4 ml-1.5" />
             </Button>
-            <Button variant="outline" size="lg" onClick={() => navigate("/dashboard")} data-testid="button-view-examples">
-              View Example Reports
+            <Button variant="outline" size="lg" onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })} data-testid="button-see-pricing">
+              See Pricing
               <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
+          </div>
+
+          <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground/60 flex-wrap">
+            <span className="flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500/60" />
+              Secrets & auth vulnerabilities
+            </span>
+            <span className="flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500/60" />
+              Broken dependencies
+            </span>
+            <span className="flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500/60" />
+              Scalability bottlenecks
+            </span>
+            <span className="flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500/60" />
+              Missing CI/CD
+            </span>
           </div>
         </div>
       </section>
@@ -178,12 +278,14 @@ export default function Landing() {
       <section className="pb-20 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-2xl font-bold mb-3">What We Scan For</h2>
-            <p className="text-muted-foreground text-sm">Real pattern detection across your entire codebase</p>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-3" data-testid="text-value-title">What CodeAudit Finds For You</h2>
+            <p className="text-muted-foreground text-sm max-w-lg mx-auto">
+              We find real risks in your code. Actionable recommendations, not noise.
+            </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {features.map((f, i) => (
+            {valueBlocks.map((f, i) => (
               <div
                 key={i}
                 data-testid={`card-feature-${i}`}
@@ -193,7 +295,11 @@ export default function Landing() {
                   {f.icon}
                 </div>
                 <h3 className="font-semibold text-sm mb-1.5">{f.title}</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">{f.desc}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed mb-3">{f.desc}</p>
+                <p className="text-[11px] text-primary/70 font-medium flex items-center gap-1">
+                  <Target className="w-3 h-3" />
+                  {f.impact}
+                </p>
               </div>
             ))}
           </div>
@@ -202,21 +308,138 @@ export default function Landing() {
 
       <section className="pb-20 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold mb-3">How It Works</h2>
+          <div className="text-center mb-10">
+            <h2 className="text-2xl sm:text-3xl font-bold mb-3" data-testid="text-how-title">How It Works</h2>
+            <p className="text-muted-foreground text-sm">Simple process, powerful results</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { step: "1", title: "Paste Your Repo", desc: "Enter your GitHub repository URL or pick from your repos. We analyze public and private repos." },
-              { step: "2", title: "Automated Scan", desc: "Our scanner fetches your file tree, detects patterns across 80+ files, and identifies real issues with evidence." },
-              { step: "3", title: "Get Your Report", desc: "Receive severity-ranked findings with code snippets, business impact, fix steps, and a 14-day remediation plan." },
+              {
+                step: "1",
+                title: "Submit Your Repo",
+                desc: "Paste your GitHub repository URL or pick from your connected repos. We analyze public and private repositories.",
+                icon: <GitFork className="w-5 h-5" />,
+              },
+              {
+                step: "2",
+                title: "We Audit Your Code",
+                desc: "Security, stability, dependencies, architecture — our scanner fetches your file tree and detects real patterns across 80+ files.",
+                icon: <Scan className="w-5 h-5" />,
+              },
+              {
+                step: "3",
+                title: "Get Your Report",
+                desc: "Receive a prioritized report with severity-ranked findings, code evidence, business impact, fix steps, and a remediation roadmap.",
+                icon: <FileText className="w-5 h-5" />,
+              },
             ].map((item, i) => (
               <div key={i} className="text-center" data-testid={`step-${i}`}>
-                <div className="w-10 h-10 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center mx-auto mb-3">
-                  {item.step}
+                <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-4">
+                  {item.icon}
                 </div>
-                <h3 className="font-semibold text-sm mb-1.5">{item.title}</h3>
+                <div className="text-xs text-muted-foreground/60 uppercase tracking-wider mb-1.5">Step {item.step}</div>
+                <h3 className="font-semibold text-sm mb-2">{item.title}</h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-center mt-8">
+            <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground/40">
+              <span className="px-3 py-1 rounded border border-border/30">Submit</span>
+              <ArrowRight className="w-4 h-4" />
+              <span className="px-3 py-1 rounded border border-border/30">We Audit</span>
+              <ArrowRight className="w-4 h-4" />
+              <span className="px-3 py-1 rounded border border-border/30">Get Report & Remediation</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="pb-20 px-4 sm:px-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="rounded-md border border-border/40 bg-card/20 p-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+              <div>
+                <h2 className="text-xl font-bold mb-3" data-testid="text-audience-title">Perfect For</h2>
+                <ul className="space-y-2.5">
+                  {audienceList.map((item, i) => (
+                    <li key={i} className="flex items-center gap-2.5 text-sm text-foreground/80" data-testid={`audience-item-${i}`}>
+                      <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Trusted Workflows Built On</h3>
+                <div className="flex flex-wrap gap-2">
+                  {trustTools.map((tool, i) => (
+                    <span
+                      key={i}
+                      className="px-3 py-1.5 rounded-md border border-border/40 bg-background/50 text-xs text-muted-foreground font-medium"
+                      data-testid={`trust-tool-${i}`}
+                    >
+                      {tool}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground/60 mt-3 italic">
+                  Powered by industry tools + human-level pattern analysis
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="pricing" className="pb-20 px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl sm:text-3xl font-bold mb-3" data-testid="text-pricing-title">Audit Packages</h2>
+            <p className="text-muted-foreground text-sm max-w-md mx-auto">
+              Price transparency increases trust. Pick the level of depth you need.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {pricingTiers.map((tier, i) => (
+              <div
+                key={i}
+                data-testid={`pricing-tier-${tier.name.toLowerCase()}`}
+                className={`rounded-md border p-6 flex flex-col ${
+                  tier.popular
+                    ? "border-primary/50 bg-primary/5 ring-1 ring-primary/20"
+                    : "border-border/40 bg-card/30"
+                }`}
+              >
+                {tier.popular && (
+                  <div className="text-[10px] uppercase tracking-wider text-primary font-semibold mb-2">
+                    Most Popular
+                  </div>
+                )}
+                <h3 className="text-lg font-bold mb-1">{tier.name}</h3>
+                <div className="flex items-baseline gap-1 mb-2">
+                  <span className="text-3xl font-bold">{tier.price}</span>
+                  <span className="text-xs text-muted-foreground">/ audit</span>
+                </div>
+                <p className="text-xs text-muted-foreground mb-5">{tier.desc}</p>
+                <ul className="space-y-2 mb-6 flex-1">
+                  {tier.features.map((feature, j) => (
+                    <li key={j} className="flex items-start gap-2 text-xs text-foreground/80">
+                      <Check className="w-3.5 h-3.5 text-emerald-500 mt-0.5 flex-shrink-0" />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+                <Button
+                  variant={tier.popular ? "default" : "outline"}
+                  className="w-full"
+                  onClick={() => document.getElementById("intake-form")?.scrollIntoView({ behavior: "smooth" })}
+                  data-testid={`button-pricing-${tier.name.toLowerCase()}`}
+                >
+                  {tier.cta}
+                  <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                </Button>
               </div>
             ))}
           </div>
@@ -226,8 +449,8 @@ export default function Landing() {
       <section id="intake-form" className="pb-24 px-4 sm:px-6">
         <div className="max-w-xl mx-auto">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold mb-2">Scan Your Repository</h2>
-            <p className="text-sm text-muted-foreground">Results in minutes, not days</p>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-2" data-testid="text-form-title">Start Your Audit</h2>
+            <p className="text-sm text-muted-foreground">Submit your repo. Get your report. Fix what matters first.</p>
           </div>
 
           <form
@@ -361,7 +584,7 @@ export default function Landing() {
               ) : (
                 <>
                   <Scan className="w-4 h-4 mr-1.5" />
-                  Scan Repository
+                  Start Your Audit
                 </>
               )}
             </Button>
@@ -370,14 +593,14 @@ export default function Landing() {
       </section>
 
       <footer className="border-t border-border/30 py-8 px-4 sm:px-6">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <div className="w-5 h-5 rounded bg-primary flex items-center justify-center">
               <Code2 className="w-3 h-3 text-primary-foreground" />
             </div>
-            <span className="text-sm font-medium">CodeScope</span>
+            <span className="text-sm font-medium" data-testid="text-footer-logo">CodeAudit</span>
           </div>
-          <p className="text-xs text-muted-foreground">Automated code audits for the AI era</p>
+          <p className="text-xs text-muted-foreground">Professional codebase audits for AI-built startups</p>
         </div>
       </footer>
     </div>

@@ -5,7 +5,7 @@ export async function seedStripeProducts() {
     const stripe = await getUncachableStripeClient();
 
     const existing = await stripe.products.search({
-      query: "name:'CodeScope Audit Unlock'",
+      query: "name:'CodeAudit Report Unlock'",
     });
 
     if (existing.data.length > 0) {
@@ -14,7 +14,7 @@ export async function seedStripeProducts() {
     }
 
     const product = await stripe.products.create({
-      name: "CodeScope Audit Unlock",
+      name: "CodeAudit Report Unlock",
       description:
         "Unlock full remediation details for your code audit: fix steps for every finding, code evidence, and a 14-day remediation roadmap.",
       metadata: {
