@@ -69,7 +69,7 @@ export default function Landing() {
       const urlParts = formData.repoUrl.replace("https://github.com/", "").split("/");
       const ownerName = urlParts[0] || "unknown";
       const repoName = urlParts[1]?.replace(".git", "") || "unknown";
-      const res = await apiRequest("POST", "/api/audits", {
+      const res = await apiRequest("POST", "/api/submit-audit", {
         ...formData,
         ownerName,
         repoName,
@@ -80,10 +80,7 @@ export default function Landing() {
     onSuccess: async (audit) => {
       queryClient.invalidateQueries({ queryKey: ["/api/audits"] });
       toast({ title: "Audit Created", description: "Starting scan..." });
-      try {
-        await apiRequest("POST", `/api/audits/${audit.id}/scan`);
-      } catch {}
-      navigate(`/audit/${audit.id}`);
+      navigate(`/audit/${audit.auditId}`);
     },
     onError: (err: Error) => {
       toast({ title: "Error", description: err.message, variant: "destructive" });

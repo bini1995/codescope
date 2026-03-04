@@ -47,6 +47,10 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+const submitAuditSchema = insertAuditSchema.extend({
+  triggerScan: z.boolean().optional().default(true),
+});
+
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
   await seedStripeProducts();
 
@@ -93,6 +97,109 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json({ id: user.id, email: user.email, fullName: user.fullName });
   });
 
+  app.get("/api/auth/github", (req, res) => {
+    const clientId = process.env.GITHUB_CLIENT_ID;
+    if (!clientId) {
+      return res.status(501).json({ message: "GitHub OAuth is not configured" });
+    }
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+    const callbackUrl = process.env.GITHUB_CALLBACK_URL || `${baseUrl}/api/auth/github/callback`;
+    const state = Math.random().toString(36).slice(2);
+    res.cookie("github_oauth_state", state, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 10 * 60 * 1000,
+      path: "/",
+    });
+    const authorizeUrl = new URL("https://github.com/login/oauth/authorize");
+    authorizeUrl.searchParams.set("client_id", clientId);
+    authorizeUrl.searchParams.set("redirect_uri", callbackUrl);
+    authorizeUrl.searchParams.set("scope", "read:user user:email");
+    authorizeUrl.searchParams.set("state", state);
+    res.redirect(authorizeUrl.toString());
+  });
+
+  app.get("/api/auth/github/callback", async (req, res) => {
+    const clientId = process.env.GITHUB_CLIENT_ID;
+    const clientSecret = process.env.GITHUB_CLIENT_SECRET;
+    if (!clientId || !clientSecret) {
+      return res.status(501).json({ message: "GitHub OAuth is not configured" });
+    }
+
+    const code = req.query.code;
+    const state = req.query.state;
+    const cookieState = req.headers.cookie
+      ?.split(";")
+      .map((part) => part.trim())
+      .find((part) => part.startsWith("github_oauth_state="))
+      ?.split("=")[1];
+
+    if (!code || typeof code !== "string" || !state || state !== cookieState) {
+      return res.status(400).json({ message: "Invalid OAuth callback state" });
+    }
+
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+    const callbackUrl = process.env.GITHUB_CALLBACK_URL || `${baseUrl}/api/auth/github/callback`;
+
+    try {
+      const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          client_id: clientId,
+          client_secret: clientSecret,
+          code,
+          redirect_uri: callbackUrl,
+        }),
+      });
+
+      const tokenData = await tokenResponse.json();
+      const accessToken = tokenData?.access_token as string | undefined;
+      if (!accessToken) {
+        return res.status(401).json({ message: "GitHub token exchange failed" });
+      }
+
+      const userRes = await fetch("https://api.github.com/user", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: "application/vnd.github+json",
+          "User-Agent": "codescope-oauth",
+        },
+      });
+      const userData = await userRes.json();
+
+      const emailsRes = await fetch("https://api.github.com/user/emails", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: "application/vnd.github+json",
+          "User-Agent": "codescope-oauth",
+        },
+      });
+      const emails = (await emailsRes.json()) as Array<{ email: string; primary: boolean; verified: boolean }>;
+      const email = emails.find((e) => e.primary && e.verified)?.email || emails.find((e) => e.verified)?.email;
+
+      if (!email) {
+        return res.status(400).json({ message: "GitHub account has no verified email" });
+      }
+
+      let user = await storage.getUserByEmail(email);
+      if (!user) {
+        user = await storage.createUser({
+          email,
+          fullName: userData.name || userData.login || "GitHub User",
+          passwordHash: hashPassword(`${userData.id}:${Date.now()}:${Math.random()}`),
+        });
+      }
+
+      createAuthSession(res, { id: user.id, email: user.email });
+      res.clearCookie("github_oauth_state", { path: "/" });
+      return res.redirect("/");
+    } catch (err: any) {
+      return res.status(500).json({ message: err.message || "GitHub OAuth failed" });
+    }
+  });
+
   app.get("/api/audits", requireAuth, async (req, res) => {
     const audits = await storage.getAudits(req.auth!.sub);
     const sanitized = audits.map((a) => ({
@@ -136,6 +243,25 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
     const audit = await storage.createAudit({ ...parsed.data, userId: req.auth!.sub });
     res.status(201).json(audit);
+  });
+
+  app.post("/api/submit-audit", requireAuth, async (req, res) => {
+    const parsed = submitAuditSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
+
+    const { triggerScan, ...auditPayload } = parsed.data;
+    const audit = await storage.createAudit({ ...auditPayload, userId: req.auth!.sub });
+    const jobId = audit.id;
+
+    if (triggerScan) {
+      setTimeout(() => {
+        scanRepository(jobId).catch((err) => {
+          console.error(`Async submit-audit scan failed for ${jobId}:`, err);
+        });
+      }, 100);
+    }
+
+    return res.status(202).json({ jobId, auditId: audit.id, status: "queued" });
   });
 
   app.patch("/api/audits/:id", requireAuth, async (req, res) => {
@@ -240,7 +366,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const stripe = await getUncachableStripeClient();
 
       const priceResult = await db.execute(
-        sql`SELECT pr.id as price_id FROM stripe.products p JOIN stripe.prices pr ON pr.product = p.id WHERE p.active = true AND p.metadata->>'type' = 'audit_unlock' LIMIT 1`
+        sql`SELECT pr.id as price_id FROM stripe.products p JOIN stripe.prices pr ON pr.product = p.id WHERE p.active = true AND p.metadata->>'type' = 'expert_audit' LIMIT 1`
       );
 
       if (!priceResult.rows.length) {

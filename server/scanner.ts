@@ -542,6 +542,7 @@ export async function scanRepository(auditId: string): Promise<void> {
 
     const scores = calculateScores(deduped);
     const summary = generateSummary(audit.ownerName, audit.repoName, deduped, scores);
+    const llmSummary = await generateLlmSummary(audit.ownerName, audit.repoName, deduped, scores);
     const plan = generateRemediationPlan(deduped);
 
     addLog("complete", "ok", `Scan complete: ${deduped.length} findings, ${Object.values(scores).reduce((a, b) => a + b, 0) / 5} avg score`);
@@ -549,7 +550,7 @@ export async function scanRepository(auditId: string): Promise<void> {
     await storage.updateAudit(auditId, {
       status: "complete",
       ...scores,
-      executiveSummary: summary,
+      executiveSummary: llmSummary || summary,
       remediationPlan: plan,
       scanLog: log,
       scannedAt: new Date(),
@@ -627,6 +628,62 @@ function generateSummary(owner: string, repo: string, findings: Omit<InsertFindi
   }
 
   return summary;
+}
+
+async function generateLlmSummary(
+  owner: string,
+  repo: string,
+  findings: Omit<InsertFinding, "auditId">[],
+  scores: {
+    securityScore: number;
+    stabilityScore: number;
+    maintainabilityScore: number;
+    scalabilityScore: number;
+    cicdScore: number;
+  }
+): Promise<string | null> {
+  const apiKey = process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY;
+  if (!apiKey || findings.length === 0) return null;
+
+  const topFindings = findings
+    .slice()
+    .sort((a, b) => {
+      const weight = { critical: 4, high: 3, medium: 2, low: 1 };
+      return weight[b.severity as keyof typeof weight] - weight[a.severity as keyof typeof weight];
+    })
+    .slice(0, 10)
+    .map((f, idx) => `${idx + 1}. [${f.severity.toUpperCase()}] ${f.title} (${f.category})`)
+    .join("\n");
+
+  const prompt = [
+    `Summarize these findings for an indie founder in plain language for repo ${owner}/${repo}.`,
+    "Keep it concise (5-7 sentences), prioritize business risk, and end with what to fix first this week.",
+    `Scores: security ${scores.securityScore}/10, stability ${scores.stabilityScore}/10, maintainability ${scores.maintainabilityScore}/10, scalability ${scores.scalabilityScore}/10, cicd ${scores.cicdScore}/10.`,
+    `Findings:\n${topFindings}`,
+  ].join("\n\n");
+
+  try {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: process.env.GROQ_MODEL || "llama-3.3-70b-versatile",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.2,
+      }),
+    });
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    const summary = data?.choices?.[0]?.message?.content;
+    return typeof summary === "string" && summary.trim() ? summary.trim() : null;
+  } catch {
+    return null;
+  }
 }
 
 function generateRemediationPlan(findings: Omit<InsertFinding, "auditId">[]): any[] {
