@@ -167,7 +167,7 @@ export default function Landing() {
         "Basic remediation guidance",
         "Ideal for early validation before a manual audit",
       ],
-      cta: "Join Waitlist",
+      cta: "Get $99 Scan",
       popular: false,
     },
     {
@@ -181,7 +181,7 @@ export default function Landing() {
         "14-day prioritized remediation roadmap",
         "Manual intake and follow-up support",
       ],
-      cta: "Book Expert Audit",
+      cta: "Book $1,500 Audit",
       popular: true,
     },
   ];
@@ -215,59 +215,6 @@ export default function Landing() {
           </div>
         </div>
       </nav>
-
-
-      {!user && (
-        <section className="pt-24 pb-6 px-4 sm:px-6">
-          <div className="max-w-md mx-auto rounded-lg border border-border/60 bg-card/50 p-5">
-            <h2 className="text-lg font-semibold mb-1">Sign in to start an audit</h2>
-            <p className="text-sm text-muted-foreground mb-4">Create an account or sign in to associate submissions with your user ID.</p>
-            <div className="grid grid-cols-2 gap-2 mb-3">
-              <Button variant={authMode === "signin" ? "default" : "outline"} onClick={() => setAuthMode("signin")}>Sign In</Button>
-              <Button variant={authMode === "signup" ? "default" : "outline"} onClick={() => setAuthMode("signup")}>Sign Up</Button>
-            </div>
-            {authMode === "signup" && (
-              <Input
-                className="mb-2"
-                placeholder="Full name"
-                value={authForm.fullName}
-                onChange={(e) => setAuthForm((prev) => ({ ...prev, fullName: e.target.value }))}
-              />
-            )}
-            <Input
-              className="mb-2"
-              placeholder="Email"
-              type="email"
-              value={authForm.email}
-              onChange={(e) => setAuthForm((prev) => ({ ...prev, email: e.target.value }))}
-            />
-            <Input
-              className="mb-3"
-              placeholder="Password"
-              type="password"
-              value={authForm.password}
-              onChange={(e) => setAuthForm((prev) => ({ ...prev, password: e.target.value }))}
-            />
-            <Button
-              className="w-full"
-              onClick={async () => {
-                try {
-                  if (authMode === "signup") {
-                    await signUp(authForm);
-                  } else {
-                    await signIn({ email: authForm.email, password: authForm.password });
-                  }
-                  toast({ title: "Welcome", description: "You are now signed in." });
-                } catch (err: any) {
-                  toast({ title: "Auth error", description: err.message, variant: "destructive" });
-                }
-              }}
-            >
-              {authMode === "signup" ? "Create account" : "Sign in"}
-            </Button>
-          </div>
-        </section>
-      )}
 
       {user && (
         <section className="pt-24 pb-4 px-4 sm:px-6">
@@ -622,6 +569,58 @@ export default function Landing() {
                 className="resize-none"
               />
             </div>
+
+            {!user && (
+              <div className="rounded-md border border-border/50 bg-background/40 p-3">
+                <p className="text-xs text-muted-foreground mb-3">
+                  Sign in or create an account to submit this intake form.
+                </p>
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  <Button type="button" variant={authMode === "signin" ? "default" : "outline"} onClick={() => setAuthMode("signin")}>Sign In</Button>
+                  <Button type="button" variant={authMode === "signup" ? "default" : "outline"} onClick={() => setAuthMode("signup")}>Sign Up</Button>
+                </div>
+                {authMode === "signup" && (
+                  <Input
+                    className="mb-2"
+                    placeholder="Full name"
+                    value={authForm.fullName}
+                    onChange={(e) => setAuthForm((prev) => ({ ...prev, fullName: e.target.value }))}
+                  />
+                )}
+                <Input
+                  className="mb-2"
+                  placeholder="Email"
+                  type="email"
+                  value={authForm.email}
+                  onChange={(e) => setAuthForm((prev) => ({ ...prev, email: e.target.value }))}
+                />
+                <Input
+                  className="mb-2"
+                  placeholder="Password"
+                  type="password"
+                  value={authForm.password}
+                  onChange={(e) => setAuthForm((prev) => ({ ...prev, password: e.target.value }))}
+                />
+                <Button
+                  type="button"
+                  className="w-full"
+                  onClick={async () => {
+                    try {
+                      if (authMode === "signup") {
+                        await signUp(authForm);
+                      } else {
+                        await signIn({ email: authForm.email, password: authForm.password });
+                      }
+                      toast({ title: "Welcome", description: "You are now signed in." });
+                    } catch (err: any) {
+                      toast({ title: "Auth error", description: err.message, variant: "destructive" });
+                    }
+                  }}
+                >
+                  {authMode === "signup" ? "Create account" : "Sign in"}
+                </Button>
+              </div>
+            )}
 
             <Button
               type="submit"
