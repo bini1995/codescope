@@ -5,6 +5,7 @@ import { z } from "zod";
 
 export const audits = pgTable("audits", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   repoUrl: text("repo_url").notNull(),
   repoName: text("repo_name").notNull(),
   ownerName: text("owner_name").notNull(),
@@ -30,6 +31,14 @@ export const audits = pgTable("audits", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  fullName: text("full_name").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const findings = pgTable("findings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   auditId: varchar("audit_id").notNull().references(() => audits.id),
@@ -50,6 +59,7 @@ export const findings = pgTable("findings", {
 
 export const insertAuditSchema = createInsertSchema(audits).omit({
   id: true,
+  userId: true,
   createdAt: true,
   securityScore: true,
   stabilityScore: true,
@@ -70,10 +80,17 @@ export const insertFindingSchema = createInsertSchema(findings).omit({
   id: true,
 });
 
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type Audit = typeof audits.$inferSelect;
 export type InsertAudit = z.infer<typeof insertAuditSchema>;
 export type Finding = typeof findings.$inferSelect;
 export type InsertFinding = z.infer<typeof insertFindingSchema>;
+export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
 
 export type RepoMeta = {
   languages: Record<string, number>;

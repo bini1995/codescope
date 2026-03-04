@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { createServer, type Server } from "http";
+import { type Server } from "http";
 import { storage } from "./storage";
 import { insertAuditSchema, insertFindingSchema } from "@shared/schema";
 import { getUncachableGitHubClient } from "./github";
@@ -9,6 +9,14 @@ import { seedStripeProducts } from "./stripe-seed";
 import { z } from "zod";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
+import {
+  clearAuthSession,
+  createAuthSession,
+  hashPassword,
+  optionalAuth,
+  requireAuth,
+  verifyPassword,
+} from "./middleware/auth";
 
 const updateAuditSchema = insertAuditSchema.partial().extend({
   securityScore: z.number().min(0).max(10).nullable().optional(),
@@ -28,14 +36,65 @@ const createRepoSchema = z.object({
   isPrivate: z.boolean().optional(),
 });
 
-export async function registerRoutes(
-  httpServer: Server,
-  app: Express
-): Promise<Server> {
+const registerSchema = z.object({
+  fullName: z.string().min(1),
+  email: z.string().email(),
+  password: z.string().min(8),
+});
+
+const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
+
+export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
   await seedStripeProducts();
 
-  app.get("/api/audits", async (_req, res) => {
-    const audits = await storage.getAudits();
+  app.use(optionalAuth);
+
+  app.post("/api/auth/register", async (req, res) => {
+    const parsed = registerSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
+
+    const existing = await storage.getUserByEmail(parsed.data.email);
+    if (existing) return res.status(409).json({ message: "Email already in use" });
+
+    const user = await storage.createUser({
+      fullName: parsed.data.fullName,
+      email: parsed.data.email,
+      passwordHash: hashPassword(parsed.data.password),
+    });
+
+    createAuthSession(res, { id: user.id, email: user.email });
+    res.status(201).json({ user: { id: user.id, email: user.email, fullName: user.fullName } });
+  });
+
+  app.post("/api/auth/login", async (req, res) => {
+    const parsed = loginSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
+
+    const user = await storage.getUserByEmail(parsed.data.email);
+    if (!user || !verifyPassword(parsed.data.password, user.passwordHash)) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    createAuthSession(res, { id: user.id, email: user.email });
+    res.json({ user: { id: user.id, email: user.email, fullName: user.fullName } });
+  });
+
+  app.post("/api/auth/logout", (_req, res) => {
+    clearAuthSession(res);
+    res.status(204).send();
+  });
+
+  app.get("/api/auth/me", requireAuth, async (req, res) => {
+    const user = await storage.getUserById(req.auth!.sub);
+    if (!user) return res.status(401).json({ message: "User not found" });
+    res.json({ id: user.id, email: user.email, fullName: user.fullName });
+  });
+
+  app.get("/api/audits", requireAuth, async (req, res) => {
+    const audits = await storage.getAudits(req.auth!.sub);
     const sanitized = audits.map((a) => ({
       ...a,
       remediationPlan: a.paidAt ? a.remediationPlan : null,
@@ -44,8 +103,8 @@ export async function registerRoutes(
     res.json(sanitized);
   });
 
-  app.get("/api/audits/:id", async (req, res) => {
-    const audit = await storage.getAudit(req.params.id);
+  app.get("/api/audits/:id", requireAuth, async (req, res) => {
+    const audit = await storage.getAudit(String(req.params.id), req.auth!.sub);
     if (!audit) return res.status(404).json({ message: "Audit not found" });
     const isPaid = !!audit.paidAt;
     const sanitized = {
@@ -56,10 +115,10 @@ export async function registerRoutes(
     res.json(sanitized);
   });
 
-  app.get("/api/audits/:id/findings", async (req, res) => {
-    const audit = await storage.getAudit(req.params.id);
+  app.get("/api/audits/:id/findings", requireAuth, async (req, res) => {
+    const audit = await storage.getAudit(String(req.params.id), req.auth!.sub);
     if (!audit) return res.status(404).json({ message: "Audit not found" });
-    const findings = await storage.getFindingsByAudit(req.params.id);
+    const findings = await storage.getFindingsByAudit(String(req.params.id), req.auth!.sub);
     const isPaid = !!audit.paidAt;
     if (!isPaid) {
       const gated = findings.map((f) => ({
@@ -72,70 +131,85 @@ export async function registerRoutes(
     res.json(findings);
   });
 
-  app.post("/api/audits", async (req, res) => {
+  app.post("/api/audits", requireAuth, async (req, res) => {
     const parsed = insertAuditSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
-    const audit = await storage.createAudit(parsed.data);
+    const audit = await storage.createAudit({ ...parsed.data, userId: req.auth!.sub });
     res.status(201).json(audit);
   });
 
-  app.patch("/api/audits/:id", async (req, res) => {
+  app.patch("/api/audits/:id", requireAuth, async (req, res) => {
     const parsed = updateAuditSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
-    const audit = await storage.updateAudit(req.params.id, parsed.data);
+    const audit = await storage.updateAudit(String(req.params.id), parsed.data, req.auth!.sub);
     if (!audit) return res.status(404).json({ message: "Audit not found" });
     res.json(audit);
   });
 
-  app.delete("/api/audits/:id", async (req, res) => {
-    await storage.deleteAudit(req.params.id);
+  app.delete("/api/audits/:id", requireAuth, async (req, res) => {
+    await storage.deleteAudit(String(req.params.id), req.auth!.sub);
     res.status(204).send();
   });
 
-  app.post("/api/audits/:id/findings", async (req, res) => {
-    const parsed = insertFindingSchema.safeParse({ ...req.body, auditId: req.params.id });
+  app.post("/api/audits/:id/findings", requireAuth, async (req, res) => {
+    const audit = await storage.getAudit(String(req.params.id), req.auth!.sub);
+    if (!audit) return res.status(404).json({ message: "Audit not found" });
+    const parsed = insertFindingSchema.safeParse({ ...req.body, auditId: String(req.params.id) });
     if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
     const finding = await storage.createFinding(parsed.data);
     res.status(201).json(finding);
   });
 
-  app.patch("/api/findings/:id", async (req, res) => {
+  app.patch("/api/findings/:id", requireAuth, async (req, res) => {
+    const finding = await storage.getFinding(String(req.params.id));
+    if (!finding) return res.status(404).json({ message: "Finding not found" });
+    const audit = await storage.getAudit(finding.auditId, req.auth!.sub);
+    if (!audit) return res.status(404).json({ message: "Finding not found" });
+
     const parsed = updateFindingSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
-    const finding = await storage.updateFinding(req.params.id, parsed.data);
-    if (!finding) return res.status(404).json({ message: "Finding not found" });
-    res.json(finding);
+    const updated = await storage.updateFinding(String(req.params.id), parsed.data);
+    if (!updated) return res.status(404).json({ message: "Finding not found" });
+    res.json(updated);
   });
 
-  app.delete("/api/findings/:id", async (req, res) => {
-    await storage.deleteFinding(req.params.id);
+  app.delete("/api/findings/:id", requireAuth, async (req, res) => {
+    const finding = await storage.getFinding(String(req.params.id));
+    if (!finding) return res.status(404).json({ message: "Finding not found" });
+    const audit = await storage.getAudit(finding.auditId, req.auth!.sub);
+    if (!audit) return res.status(404).json({ message: "Finding not found" });
+    await storage.deleteFinding(String(req.params.id));
     res.status(204).send();
   });
 
-  app.post("/api/audits/:id/scan", async (req, res) => {
-    const audit = await storage.getAudit(req.params.id);
+  app.post("/api/audits/:id/scan", requireAuth, async (req, res) => {
+    const audit = await storage.getAudit(String(req.params.id), req.auth!.sub);
     if (!audit) return res.status(404).json({ message: "Audit not found" });
     if (audit.status === "in_progress") {
       return res.status(409).json({ message: "Scan already in progress" });
     }
 
-    const existingFindings = await storage.getFindingsByAudit(audit.id);
+    const existingFindings = await storage.getFindingsByAudit(audit.id, req.auth!.sub);
     const autoFindings = existingFindings.filter((f) => f.autoDetected);
     for (const f of autoFindings) {
       await storage.deleteFinding(f.id);
     }
 
-    await storage.updateAudit(audit.id, {
-      status: "in_progress",
-      securityScore: null,
-      stabilityScore: null,
-      maintainabilityScore: null,
-      scalabilityScore: null,
-      cicdScore: null,
-      executiveSummary: null,
-      remediationPlan: null,
-      scanLog: [],
-    });
+    await storage.updateAudit(
+      audit.id,
+      {
+        status: "in_progress",
+        securityScore: null,
+        stabilityScore: null,
+        maintainabilityScore: null,
+        scalabilityScore: null,
+        cicdScore: null,
+        executiveSummary: null,
+        remediationPlan: null,
+        scanLog: [],
+      },
+      req.auth!.sub
+    );
 
     res.json({ message: "Scan started", auditId: audit.id });
 
@@ -144,8 +218,8 @@ export async function registerRoutes(
     });
   });
 
-  app.get("/api/audits/:id/scan-status", async (req, res) => {
-    const audit = await storage.getAudit(req.params.id);
+  app.get("/api/audits/:id/scan-status", requireAuth, async (req, res) => {
+    const audit = await storage.getAudit(String(req.params.id), req.auth!.sub);
     if (!audit) return res.status(404).json({ message: "Audit not found" });
     res.json({
       status: audit.status,
@@ -154,9 +228,9 @@ export async function registerRoutes(
     });
   });
 
-  app.post("/api/audits/:id/checkout", async (req, res) => {
+  app.post("/api/audits/:id/checkout", requireAuth, async (req, res) => {
     try {
-      const audit = await storage.getAudit(req.params.id);
+      const audit = await storage.getAudit(String(req.params.id), req.auth!.sub);
       if (!audit) return res.status(404).json({ message: "Audit not found" });
 
       if (audit.paidAt) {
@@ -184,12 +258,17 @@ export async function registerRoutes(
         cancel_url: `${baseUrl}/audit/${audit.id}?payment=cancelled`,
         metadata: {
           auditId: audit.id,
+          userId: req.auth!.sub,
         },
       });
 
-      await storage.updateAudit(audit.id, {
-        stripeSessionId: session.id,
-      });
+      await storage.updateAudit(
+        audit.id,
+        {
+          stripeSessionId: session.id,
+        },
+        req.auth!.sub
+      );
 
       res.json({ url: session.url });
     } catch (error: any) {
@@ -198,9 +277,9 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/audits/:id/verify-payment", async (req, res) => {
+  app.post("/api/audits/:id/verify-payment", requireAuth, async (req, res) => {
     try {
-      const audit = await storage.getAudit(req.params.id);
+      const audit = await storage.getAudit(String(req.params.id), req.auth!.sub);
       if (!audit) return res.status(404).json({ message: "Audit not found" });
 
       if (audit.paidAt) {
@@ -215,9 +294,13 @@ export async function registerRoutes(
       const session = await stripe.checkout.sessions.retrieve(audit.stripeSessionId);
 
       if (session.payment_status === "paid") {
-        await storage.updateAudit(audit.id, {
-          paidAt: new Date(),
-        });
+        await storage.updateAudit(
+          audit.id,
+          {
+            paidAt: new Date(),
+          },
+          req.auth!.sub
+        );
         return res.json({ paid: true });
       }
 
@@ -237,7 +320,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/github/create-repo", async (req, res) => {
+  app.post("/api/github/create-repo", requireAuth, async (req, res) => {
     const parsed = createRepoSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
     try {
@@ -255,7 +338,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/github/user", async (_req, res) => {
+  app.get("/api/github/user", requireAuth, async (_req, res) => {
     try {
       const octokit = await getUncachableGitHubClient();
       const { data } = await octokit.users.getAuthenticated();
@@ -265,7 +348,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/github/repos", async (req, res) => {
+  app.get("/api/github/repos", requireAuth, async (_req, res) => {
     try {
       const octokit = await getUncachableGitHubClient();
       const { data } = await octokit.repos.listForAuthenticatedUser({

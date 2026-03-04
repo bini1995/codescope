@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
 import {
   Shield,
   Zap,
@@ -44,6 +45,7 @@ type GHRepo = {
 export default function Landing() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { user, signIn, signUp, signOut } = useAuth();
   const [formData, setFormData] = useState({
     repoUrl: "",
     contactName: "",
@@ -53,13 +55,17 @@ export default function Landing() {
     biggestConcern: "",
   });
   const [showRepos, setShowRepos] = useState(false);
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
+  const [authForm, setAuthForm] = useState({ fullName: "", email: "", password: "" });
 
   const { data: repos } = useQuery<GHRepo[]>({
     queryKey: ["/api/github/repos"],
+    enabled: !!user,
   });
 
   const submitMutation = useMutation({
     mutationFn: async () => {
+      if (!user) throw new Error("Please sign in before creating an audit");
       const urlParts = formData.repoUrl.replace("https://github.com/", "").split("/");
       const ownerName = urlParts[0] || "unknown";
       const repoName = urlParts[1]?.replace(".git", "") || "unknown";
@@ -197,6 +203,11 @@ export default function Landing() {
             <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} data-testid="link-dashboard" className="text-xs sm:text-sm">
               Dashboard
             </Button>
+            {user && (
+              <Button variant="ghost" size="sm" onClick={() => signOut()} data-testid="button-signout" className="text-xs sm:text-sm">
+                Sign out
+              </Button>
+            )}
             <Button size="sm" onClick={() => document.getElementById("intake-form")?.scrollIntoView({ behavior: "smooth" })} data-testid="button-get-audit">
               Get Audit
               <ArrowRight className="w-3.5 h-3.5 ml-1" />
@@ -205,7 +216,65 @@ export default function Landing() {
         </div>
       </nav>
 
-      <section className="pt-32 pb-20 px-4 sm:px-6">
+
+      {!user && (
+        <section className="pt-24 pb-6 px-4 sm:px-6">
+          <div className="max-w-md mx-auto rounded-lg border border-border/60 bg-card/50 p-5">
+            <h2 className="text-lg font-semibold mb-1">Sign in to start an audit</h2>
+            <p className="text-sm text-muted-foreground mb-4">Create an account or sign in to associate submissions with your user ID.</p>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <Button variant={authMode === "signin" ? "default" : "outline"} onClick={() => setAuthMode("signin")}>Sign In</Button>
+              <Button variant={authMode === "signup" ? "default" : "outline"} onClick={() => setAuthMode("signup")}>Sign Up</Button>
+            </div>
+            {authMode === "signup" && (
+              <Input
+                className="mb-2"
+                placeholder="Full name"
+                value={authForm.fullName}
+                onChange={(e) => setAuthForm((prev) => ({ ...prev, fullName: e.target.value }))}
+              />
+            )}
+            <Input
+              className="mb-2"
+              placeholder="Email"
+              type="email"
+              value={authForm.email}
+              onChange={(e) => setAuthForm((prev) => ({ ...prev, email: e.target.value }))}
+            />
+            <Input
+              className="mb-3"
+              placeholder="Password"
+              type="password"
+              value={authForm.password}
+              onChange={(e) => setAuthForm((prev) => ({ ...prev, password: e.target.value }))}
+            />
+            <Button
+              className="w-full"
+              onClick={async () => {
+                try {
+                  if (authMode === "signup") {
+                    await signUp(authForm);
+                  } else {
+                    await signIn({ email: authForm.email, password: authForm.password });
+                  }
+                  toast({ title: "Welcome", description: "You are now signed in." });
+                } catch (err: any) {
+                  toast({ title: "Auth error", description: err.message, variant: "destructive" });
+                }
+              }}
+            >
+              {authMode === "signup" ? "Create account" : "Sign in"}
+            </Button>
+          </div>
+        </section>
+      )}
+
+      {user && (
+        <section className="pt-24 pb-4 px-4 sm:px-6">
+          <div className="max-w-4xl mx-auto text-sm text-muted-foreground">Signed in as <span className="font-medium text-foreground">{user.email}</span></div>
+        </section>
+      )}
+      <section className="pt-8 pb-20 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/50 px-3 py-1 mb-6">
             <AlertTriangle className="w-3.5 h-3.5 text-yellow-500" />
