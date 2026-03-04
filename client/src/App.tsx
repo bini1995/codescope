@@ -8,6 +8,7 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
 import AuditDetail from "@/pages/audit-detail";
+import { AuthProvider } from "@/hooks/use-auth";
 
 function Router() {
   return (
@@ -24,10 +25,12 @@ function App() {
   return (
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
+        <AuthProvider>
+          <TooltipProvider>
           <Toaster />
           <Router />
         </TooltipProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );
