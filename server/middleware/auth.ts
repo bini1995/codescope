@@ -5,6 +5,23 @@ const TOKEN_COOKIE = "codescope_auth";
 const TOKEN_TTL_SECONDS = 60 * 60 * 24 * 14;
 const SECRET = process.env.AUTH_SECRET || "dev-auth-secret-change-me";
 
+function getCookieOptions(): {
+  httpOnly: true;
+  secure: boolean;
+  sameSite: "lax" | "none";
+  maxAge: number;
+  path: "/";
+} {
+  const crossSite = Boolean(process.env.FRONTEND_URL);
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production" || crossSite,
+    sameSite: crossSite ? "none" : "lax",
+    maxAge: TOKEN_TTL_SECONDS * 1000,
+    path: "/",
+  };
+}
+
 type AuthPayload = {
   sub: string;
   email: string;
@@ -75,17 +92,12 @@ export function createAuthSession(res: Response, user: { id: string; email: stri
     exp: Math.floor(Date.now() / 1000) + TOKEN_TTL_SECONDS,
   });
 
-  res.cookie(TOKEN_COOKIE, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: TOKEN_TTL_SECONDS * 1000,
-    path: "/",
-  });
+  res.cookie(TOKEN_COOKIE, token, getCookieOptions());
 }
 
 export function clearAuthSession(res: Response) {
-  res.clearCookie(TOKEN_COOKIE, { path: "/" });
+  const { maxAge: _maxAge, ...cookieOptions } = getCookieOptions();
+  res.clearCookie(TOKEN_COOKIE, cookieOptions);
 }
 
 function getCookieValue(req: Request, key: string) {
