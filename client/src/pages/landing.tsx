@@ -151,46 +151,32 @@ export default function Landing() {
 
   const pricingTiers = [
     {
-      name: "Starter",
-      price: "$750",
-      desc: "Full automated code audit with prioritized findings",
+      name: "Instant Automated Scan",
+      price: "$99",
+      desc: "Self-serve scan path for quick triage (shipping soon)",
       features: [
-        "Full codebase security scan",
-        "Executive summary report",
-        "Prioritized findings list",
-        "Severity-ranked issues",
-        "Business impact analysis",
+        "One-time automated repository scan",
+        "Risk score snapshot",
+        "Top findings with severity ranking",
+        "Basic remediation guidance",
+        "Ideal for early validation before a manual audit",
       ],
-      cta: "Get Started",
+      cta: "Join Waitlist",
       popular: false,
     },
     {
-      name: "Pro",
+      name: "Expert Code Audit",
       price: "$1,500",
-      desc: "Everything in Starter plus CI setup and fix PRs",
+      desc: "Most popular: manual expert review + prioritized remediation report",
       features: [
-        "All Starter features",
-        "CI baseline + GitHub Actions config",
-        "Top 2 PR fixes submitted",
-        "14-day remediation roadmap",
-        "Detailed code evidence",
+        "Human-led codebase security + architecture review",
+        "Executive summary + business impact analysis",
+        "Detailed finding evidence and fix recommendations",
+        "14-day prioritized remediation roadmap",
+        "Manual intake and follow-up support",
       ],
-      cta: "Go Pro",
+      cta: "Book Expert Audit",
       popular: true,
-    },
-    {
-      name: "Premium",
-      price: "$3,500",
-      desc: "Full-service audit with hands-on remediation",
-      features: [
-        "All Pro features",
-        "5 PR fixes submitted",
-        "1:1 review call",
-        "Loom walkthrough recording",
-        "Priority turnaround (24h)",
-      ],
-      cta: "Go Premium",
-      popular: false,
     },
   ];
 
@@ -395,13 +381,13 @@ export default function Landing() {
       <section id="pricing" className="pb-20 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl font-bold mb-3" data-testid="text-pricing-title">Audit Packages</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-3" data-testid="text-pricing-title">Choose Your Audit Path</h2>
             <p className="text-muted-foreground text-sm max-w-md mx-auto">
-              Price transparency increases trust. Pick the level of depth you need.
+              Start with an accessible automated option or move straight to a manual expert audit.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {pricingTiers.map((tier, i) => (
               <div
                 key={i}
