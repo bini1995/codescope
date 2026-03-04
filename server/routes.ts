@@ -194,7 +194,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       createAuthSession(res, { id: user.id, email: user.email });
       res.clearCookie("github_oauth_state", { path: "/" });
-      return res.redirect("/");
+      const redirectTarget = process.env.FRONTEND_URL || "/";
+      return res.redirect(redirectTarget);
     } catch (err: any) {
       return res.status(500).json({ message: err.message || "GitHub OAuth failed" });
     }

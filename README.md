@@ -43,6 +43,9 @@ REPLIT_CONNECTORS_HOSTNAME=...
 REPL_IDENTITY=...
 WEB_REPL_RENEWAL=...
 REPLIT_DEPLOYMENT=0
+
+# Frontend -> hosted backend URL (optional for local dev)
+VITE_API_BASE_URL=https://your-backend.example.com
 ```
 
 ### 3) Push database schema
@@ -64,3 +67,8 @@ The app runs with Express + Vite together in development mode.
 
 ## Beta Access / Contact
 If you want beta access to the expert audit service, contact: **beta@codeaudit.dev**.
+
+
+## Deployment
+- Railway + Neon backend deployment guide: `docs/deploy-railway-neon.md`.
+- Existing DigitalOcean deployment guide: `docs/deploy-digitalocean.md`.
