@@ -96,6 +96,28 @@ export default function Landing() {
     setShowRepos(false);
   };
 
+  const handlePickRepo = () => {
+    if (!user) {
+      toast({
+        title: "Sign in required",
+        description: "Sign in from the dashboard first, then pick from your connected GitHub repositories.",
+      });
+      navigate("/dashboard");
+      return;
+    }
+
+    if (!repos || repos.length === 0) {
+      toast({
+        title: "No repositories found",
+        description: "Connect your GitHub account on the dashboard to load repositories.",
+      });
+      navigate("/dashboard");
+      return;
+    }
+
+    setShowRepos((prev) => !prev);
+  };
+
   const valueBlocks = [
     {
       icon: <Shield className="w-5 h-5" />,
@@ -218,7 +240,7 @@ export default function Landing() {
           <div className="max-w-4xl mx-auto text-sm text-muted-foreground">Signed in as <span className="font-medium text-foreground">{user.email}</span></div>
         </section>
       )}
-      <section className="pt-8 pb-20 px-4 sm:px-6">
+      <section className="pt-24 pb-20 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 mb-4">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
@@ -480,7 +502,7 @@ export default function Landing() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setShowRepos(!showRepos)}
+                  onClick={handlePickRepo}
                   data-testid="button-pick-repo"
                   className="flex-shrink-0 text-xs"
                 >
