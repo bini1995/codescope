@@ -120,6 +120,7 @@ export type FileTreeItem = {
   path: string;
   type: "file" | "dir";
   size?: number;
+  sha?: string;
 };
 
 export type ScanLogEntry = {

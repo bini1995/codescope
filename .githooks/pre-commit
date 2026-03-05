@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+staged_files=$(git diff --cached --name-only --diff-filter=ACMR)
+if [ -z "$staged_files" ]; then
+  exit 0
+fi
+
+lint_targets=$(echo "$staged_files" | rg '\.(ts|tsx|js|jsx|mjs|cjs)$' || true)
+format_targets=$(echo "$staged_files" | rg '\.(ts|tsx|js|jsx|mjs|cjs|json|md|yml|yaml|css|scss|html)$' || true)
+
+if [ -n "$format_targets" ]; then
+  echo "$format_targets" | xargs npx --yes prettier@3.3.3 --write
+  echo "$format_targets" | xargs git add
+fi
+
+if [ -n "$lint_targets" ]; then
+  echo "$lint_targets" | xargs env ESLINT_USE_FLAT_CONFIG=false npx --yes -p eslint@8.57.1 -p @typescript-eslint/parser@8.41.0 -p @typescript-eslint/eslint-plugin@8.41.0 -p eslint-plugin-react-hooks@4.6.2 -p eslint-config-prettier@9.1.0 eslint --fix
+  echo "$lint_targets" | xargs git add
+fi
