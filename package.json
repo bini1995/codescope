@@ -13,7 +13,8 @@
     "format": "npx --yes prettier@3.3.3 --write .",
     "format:check": "npx --yes prettier@3.3.3 --check .",
     "hooks:install": "git config core.hooksPath .githooks",
-    "prepare": "npm run hooks:install"
+    "prepare": "npm run hooks:install",
+    "test": "DATABASE_URL=postgres://local:test@localhost:5432/codescope_test tsx --test server/__tests__/*.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

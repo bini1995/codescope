@@ -7,6 +7,7 @@ import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClie
 import { enqueueScan } from "./scanQueue";
 import { seedStripeProducts } from "./stripe-seed";
 import { z } from "zod";
+import { submitAuditSchema, updateAuditSchema } from "./auditSchemas";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import {
@@ -18,16 +19,6 @@ import {
   verifyPassword,
   validateOauthState,
 } from "./middleware/auth";
-
-const updateAuditSchema = insertAuditSchema.partial().extend({
-  securityScore: z.number().min(0).max(10).nullable().optional(),
-  stabilityScore: z.number().min(0).max(10).nullable().optional(),
-  maintainabilityScore: z.number().min(0).max(10).nullable().optional(),
-  scalabilityScore: z.number().min(0).max(10).nullable().optional(),
-  cicdScore: z.number().min(0).max(10).nullable().optional(),
-  executiveSummary: z.string().nullable().optional(),
-  remediationPlan: z.any().optional(),
-});
 
 const updateFindingSchema = insertFindingSchema.partial();
 
@@ -46,10 +37,6 @@ const registerSchema = z.object({
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
-});
-
-const submitAuditSchema = insertAuditSchema.extend({
-  triggerScan: z.boolean().optional().default(true),
 });
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {

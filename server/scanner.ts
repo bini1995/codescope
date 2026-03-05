@@ -159,16 +159,16 @@ const SCANNABLE_EXTENSIONS = [
   ".php", ".cs", ".swift", ".kt",
 ];
 
-function shouldScanFile(path: string): boolean {
+export function shouldScanFile(path: string): boolean {
   const ext = "." + path.split(".").pop()?.toLowerCase();
   return SCANNABLE_EXTENSIONS.includes(ext);
 }
 
-function getLineNumber(content: string, index: number): number {
+export function getLineNumber(content: string, index: number): number {
   return content.substring(0, index).split("\n").length;
 }
 
-function truncateSnippet(content: string, lineNum: number, contextLines: number = 2): string {
+export function truncateSnippet(content: string, lineNum: number, contextLines: number = 2): string {
   const lines = content.split("\n");
   const start = Math.max(0, lineNum - contextLines - 1);
   const end = Math.min(lines.length, lineNum + contextLines);
@@ -176,7 +176,7 @@ function truncateSnippet(content: string, lineNum: number, contextLines: number 
 }
 
 
-function buildFileTreeCacheKey(owner: string, repo: string, sha: string): string {
+export function buildFileTreeCacheKey(owner: string, repo: string, sha: string): string {
   return `${owner}/${repo}@${sha}`;
 }
 
