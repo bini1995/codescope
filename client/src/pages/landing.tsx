@@ -30,6 +30,13 @@ import {
   Target,
   Rocket,
   Check,
+  Sparkles,
+  Gauge,
+  Timer,
+  ShieldCheck,
+  Linkedin,
+  Twitter,
+  Github,
 } from "lucide-react";
 
 type GHRepo = {
@@ -319,25 +326,6 @@ export default function Landing() {
             </span>
           </div>
 
-        {showSampleReport && (
-          <div className="mt-3 rounded-md border border-border/40 bg-background/70 p-3" data-testid="sample-report-preview">
-            <h4 className="text-sm font-semibold mb-2">Sample Report Preview</h4>
-            <div className="grid gap-2 md:grid-cols-2 text-xs">
-              <div className="rounded border border-border/30 p-2">
-                <p className="font-medium mb-1">Executive Summary</p>
-                <p className="text-muted-foreground">Primary launch risk is auth/session hardening and deployment safety checks. Addressing 4 high-impact items in week 1 cuts projected outage/security exposure materially.</p>
-              </div>
-              <div className="rounded border border-border/30 p-2">
-                <p className="font-medium mb-1">Top 3 Existential Risks</p>
-                <ul className="space-y-1 text-muted-foreground">
-                  <li>• Unprotected admin actions</li>
-                  <li>• Missing CI secret scanning</li>
-                  <li>• No API rate limiting</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        )}
         </div>
       </section>
 
@@ -542,17 +530,72 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="pb-8 px-4 sm:px-6">
-        <div className="max-w-xl mx-auto rounded-md border border-emerald-500/30 bg-emerald-500/5 p-4" data-testid="sample-report-callout">
+      <section className="pb-12 px-4 sm:px-6">
+        <div className="max-w-4xl mx-auto space-y-4">
+        <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-4" data-testid="sample-report-callout">
           <div className="flex items-start justify-between gap-3">
             <div>
               <h3 className="font-semibold text-sm">See a sample report instantly</h3>
               <p className="text-xs text-muted-foreground mt-1">Preview an executive summary, top risks, and a prioritized fix roadmap before connecting your repo.</p>
             </div>
-            <Button size="sm" variant="outline" onClick={() => setShowSampleReport((prev) => !prev)} data-testid="button-view-sample-report">
+            <Button size="sm" variant="outline" onClick={() => setShowSampleReport((prev) => !prev)} data-testid="button-view-sample-report" aria-expanded={showSampleReport}>
               {showSampleReport ? "Hide Sample" : "View Sample"}
             </Button>
           </div>
+        </div>
+        <div
+          className={`grid transition-all duration-300 ease-out ${showSampleReport ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+          data-testid="sample-report-preview"
+        >
+          <div className="overflow-hidden">
+            <div className="rounded-xl border border-border/50 bg-card/40 p-4 sm:p-6 shadow-lg shadow-primary/5">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Live Demo Snapshot</p>
+                  <h4 className="text-base sm:text-lg font-semibold">SaaS Security + Stability Audit</h4>
+                </div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs text-primary">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Executive-ready output
+                </div>
+              </div>
+
+              <div className="grid lg:grid-cols-[1.4fr_1fr] gap-4">
+                <div className="rounded-lg border border-border/40 bg-background/70 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Risk Heatmap</p>
+                  <div className="space-y-3">
+                    {[{ label: "Authentication", score: 86, tone: "bg-red-500" }, { label: "CI/CD Integrity", score: 71, tone: "bg-amber-500" }, { label: "API Abuse Protection", score: 63, tone: "bg-yellow-500" }, { label: "Data Exposure", score: 29, tone: "bg-emerald-500" }].map((item) => (
+                      <div key={item.label}>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span>{item.label}</span>
+                          <span className="font-medium">{item.score}/100</span>
+                        </div>
+                        <div className="h-2 rounded-full bg-muted/50 overflow-hidden">
+                          <div className={`h-full ${item.tone}`} style={{ width: `${item.score}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="rounded-lg border border-border/40 bg-background/70 p-3 text-xs">
+                    <p className="font-semibold mb-2">Top Findings This Week</p>
+                    <ul className="space-y-2 text-muted-foreground">
+                      <li className="flex items-start gap-2"><ShieldCheck className="w-3.5 h-3.5 text-red-400 mt-0.5" /> Unprotected admin mutation endpoint.</li>
+                      <li className="flex items-start gap-2"><Gauge className="w-3.5 h-3.5 text-amber-400 mt-0.5" /> No API rate limiting on public routes.</li>
+                      <li className="flex items-start gap-2"><Timer className="w-3.5 h-3.5 text-cyan-400 mt-0.5" /> Missing rollout checks in CI workflow.</li>
+                    </ul>
+                  </div>
+                  <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs">
+                    <p className="font-semibold mb-1">Fast remediation plan</p>
+                    <p className="text-muted-foreground">Day 1 patch auth + rate limits. Day 2 add CI policy gates. Day 3 verify with regression + security smoke checks.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         </div>
       </section>
 
@@ -773,15 +816,50 @@ export default function Landing() {
         </div>
       </section>
 
-      <footer className="border-t border-border/30 py-8 px-4 sm:px-6">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
+      <footer className="border-t border-border/30 py-10 px-4 sm:px-6 bg-card/20">
+        <div className="max-w-6xl mx-auto grid gap-8 md:grid-cols-[1.2fr_1fr_1fr_1fr]">
+          <div>
+            <div className="flex items-center gap-2 mb-3">
             <div className="w-5 h-5 rounded bg-primary flex items-center justify-center">
               <Code2 className="w-3 h-3 text-primary-foreground" />
             </div>
             <span className="text-sm font-medium" data-testid="text-footer-logo">CodeAudit</span>
           </div>
-          <p className="text-xs text-muted-foreground">Professional codebase audits for AI-built startups</p>
+            <p className="text-xs text-muted-foreground max-w-xs">Professional codebase audits for AI-built startups shipping under pressure.</p>
+            <div className="flex items-center gap-2 mt-4 text-muted-foreground">
+              <Twitter className="w-4 h-4" />
+              <Linkedin className="w-4 h-4" />
+              <Github className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3">Product</p>
+            <ul className="space-y-2 text-sm">
+              <li><a href="#pricing" className="hover:text-primary transition-colors">Pricing</a></li>
+              <li><a href="#intake-form" className="hover:text-primary transition-colors">Get Audit</a></li>
+              <li><a href="#" className="hover:text-primary transition-colors">Sample Report</a></li>
+            </ul>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3">Resources</p>
+            <ul className="space-y-2 text-sm">
+              <li><a href="/docs/privacy-policy" className="hover:text-primary transition-colors">Privacy</a></li>
+              <li><a href="/docs/retention-policy" className="hover:text-primary transition-colors">Data Retention</a></li>
+              <li><a href="/docs/deploy-railway-neon" className="hover:text-primary transition-colors">Deployment Guide</a></li>
+            </ul>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3">Trust Signals</p>
+            <div className="space-y-2 text-xs text-muted-foreground">
+              <p>✓ Founder-friendly SLAs</p>
+              <p>✓ Human-reviewed findings</p>
+              <p>✓ Action-ready remediation roadmap</p>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-6xl mx-auto mt-8 pt-6 border-t border-border/30 text-xs text-muted-foreground flex flex-col sm:flex-row justify-between gap-2">
+          <p>© {new Date().getFullYear()} CodeAudit. All rights reserved.</p>
+          <p>Built for teams who need to ship fast and safely.</p>
         </div>
       </footer>
     </div>
