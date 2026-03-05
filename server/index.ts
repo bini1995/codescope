@@ -88,13 +88,14 @@ app.post(
 
 app.use(
   express.json({
+    limit: "1mb",
     verify: (req, _res, buf) => {
       req.rawBody = buf;
     },
   })
 );
 
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: false, limit: "50kb" }));
 app.use(sessionMiddleware);
 app.use(...passportMiddleware);
 
@@ -183,25 +184,46 @@ app.use((req, res, next) => {
 
 const RATE_LIMIT_WINDOW_MS = env.RATE_LIMIT_WINDOW_MS;
 const RATE_LIMIT_MAX_REQUESTS = env.RATE_LIMIT_MAX_REQUESTS;
+const AUTH_RATE_LIMIT_MAX_REQUESTS = 20;
+const RATE_LIMIT_MAX_TRACKED_IPS = 10_000;
 const ipRequestCounts = new Map<string, { count: number; expiresAt: number }>();
+
+function getRateLimitEntry(ip: string, maxRequests: number, now: number) {
+  const current = ipRequestCounts.get(ip);
+
+  if (!current || current.expiresAt <= now) {
+    if (ipRequestCounts.size >= RATE_LIMIT_MAX_TRACKED_IPS) {
+      for (const [key, value] of ipRequestCounts) {
+        if (value.expiresAt <= now) {
+          ipRequestCounts.delete(key);
+        }
+      }
+    }
+
+    const fresh = { count: 1, expiresAt: now + RATE_LIMIT_WINDOW_MS };
+    ipRequestCounts.set(ip, fresh);
+    return { entry: fresh, limited: false, remaining: Math.max(0, maxRequests - 1) };
+  }
+
+  current.count += 1;
+  return {
+    entry: current,
+    limited: current.count > maxRequests,
+    remaining: Math.max(0, maxRequests - current.count),
+  };
+}
 
 app.use("/api", (req, res, next) => {
   const key = req.ip || req.socket.remoteAddress || "unknown";
   const now = Date.now();
-  const current = ipRequestCounts.get(key);
+  const authSensitivePath = req.path.startsWith("/auth/login") || req.path.startsWith("/auth/register");
+  const limit = authSensitivePath ? AUTH_RATE_LIMIT_MAX_REQUESTS : RATE_LIMIT_MAX_REQUESTS;
+  const result = getRateLimitEntry(key, limit, now);
 
-  if (!current || current.expiresAt <= now) {
-    ipRequestCounts.set(key, { count: 1, expiresAt: now + RATE_LIMIT_WINDOW_MS });
-    res.setHeader("X-RateLimit-Limit", RATE_LIMIT_MAX_REQUESTS.toString());
-    res.setHeader("X-RateLimit-Remaining", Math.max(0, RATE_LIMIT_MAX_REQUESTS - 1).toString());
-    return next();
-  }
-
-  current.count += 1;
-  res.setHeader("X-RateLimit-Limit", RATE_LIMIT_MAX_REQUESTS.toString());
-  res.setHeader("X-RateLimit-Remaining", Math.max(0, RATE_LIMIT_MAX_REQUESTS - current.count).toString());
-  if (current.count > RATE_LIMIT_MAX_REQUESTS) {
-    const retryAfterSeconds = Math.max(1, Math.ceil((current.expiresAt - now) / 1000));
+  res.setHeader("X-RateLimit-Limit", limit.toString());
+  res.setHeader("X-RateLimit-Remaining", result.remaining.toString());
+  if (result.limited) {
+    const retryAfterSeconds = Math.max(1, Math.ceil((result.entry.expiresAt - now) / 1000));
     res.setHeader("Retry-After", retryAfterSeconds.toString());
     return res.status(429).json({ message: "Too many requests, please try again later." });
   }
@@ -236,8 +258,10 @@ app.use((req, res, next) => {
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       const isAuthPath = path.startsWith("/api/auth");
-      if (capturedJsonResponse && !isAuthPath) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      const shouldLogBody = !isAuthPath && !path.includes("checkout") && !path.includes("verify-payment");
+      if (capturedJsonResponse && shouldLogBody) {
+        const serialized = JSON.stringify(capturedJsonResponse);
+        logLine += ` :: ${serialized.length > 500 ? `${serialized.slice(0, 500)}...(truncated)` : serialized}`;
       }
 
       log(logLine);

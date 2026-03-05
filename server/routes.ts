@@ -7,6 +7,7 @@ import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClie
 import { enqueueScan } from "./scanQueue";
 import { seedStripeProducts } from "./stripe-seed";
 import { z } from "zod";
+import { randomBytes } from "crypto";
 import { submitAuditSchema, updateAuditSchema } from "./auditSchemas";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
@@ -39,6 +40,19 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function generateOauthState(): string {
+  return randomBytes(32).toString("hex");
+}
+
+function canUseSharedGitHubConnector(): boolean {
+  if (process.env.ALLOW_SHARED_GITHUB_CONNECTOR === "1") return true;
+  return process.env.NODE_ENV !== "production";
+}
+
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
   await seedStripeProducts();
 
@@ -48,12 +62,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const parsed = registerSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
 
-    const existing = await storage.getUserByEmail(parsed.data.email);
+    const normalizedEmail = normalizeEmail(parsed.data.email);
+    const existing = await storage.getUserByEmail(normalizedEmail);
     if (existing) return res.status(409).json({ message: "Email already in use" });
 
     const user = await storage.createUser({
       fullName: parsed.data.fullName,
-      email: parsed.data.email,
+      email: normalizedEmail,
       passwordHash: await hashPassword(parsed.data.password),
     });
 
@@ -65,7 +80,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const parsed = loginSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
 
-    const user = await storage.getUserByEmail(parsed.data.email);
+    const normalizedEmail = normalizeEmail(parsed.data.email);
+    const user = await storage.getUserByEmail(normalizedEmail);
     if (!user || !(await verifyPassword(parsed.data.password, user.passwordHash))) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
@@ -97,13 +113,17 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.get("/api/auth/github", (req, res) => {
+    if (!canUseSharedGitHubConnector()) {
+      return res.status(503).json({ message: "GitHub connector is disabled in production for security hardening" });
+    }
+
     const clientId = process.env.GITHUB_CLIENT_ID;
     if (!clientId) {
       return res.status(501).json({ message: "GitHub OAuth is not configured" });
     }
     const baseUrl = `${req.protocol}://${req.get("host")}`;
     const callbackUrl = process.env.GITHUB_CALLBACK_URL || `${baseUrl}/api/auth/github/callback`;
-    const state = Math.random().toString(36).slice(2);
+    const state = generateOauthState();
     req.session.githubOauthState = state;
     const authorizeUrl = new URL("https://github.com/login/oauth/authorize");
     authorizeUrl.searchParams.set("client_id", clientId);
@@ -176,7 +196,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         user = await storage.createUser({
           email,
           fullName: userData.name || userData.login || "GitHub User",
-          passwordHash: await hashPassword(`${userData.id}:${Date.now()}:${Math.random()}`),
+          passwordHash: await hashPassword(randomBytes(32).toString("hex")),
         });
       }
 
@@ -433,6 +453,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.post("/api/github/create-repo", requireAuth, async (req, res) => {
+    if (!canUseSharedGitHubConnector()) {
+      return res.status(503).json({ message: "GitHub connector is disabled in production for security hardening" });
+    }
+
     const parsed = createRepoSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
     try {
@@ -451,6 +475,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.get("/api/github/user", requireAuth, async (_req, res) => {
+    if (!canUseSharedGitHubConnector()) {
+      return res.status(503).json({ message: "GitHub connector is disabled in production for security hardening" });
+    }
+
     try {
       const octokit = await getUncachableGitHubClient();
       const { data } = await octokit.users.getAuthenticated();
@@ -461,6 +489,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.get("/api/github/repos", requireAuth, async (_req, res) => {
+    if (!canUseSharedGitHubConnector()) {
+      return res.status(503).json({ message: "GitHub connector is disabled in production for security hardening" });
+    }
+
     try {
       const octokit = await getUncachableGitHubClient();
       const { data } = await octokit.repos.listForAuthenticatedUser({
