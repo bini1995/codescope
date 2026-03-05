@@ -176,12 +176,28 @@ systemctl status certbot.timer
 From server directory (`/var/www/codeauditapp/codescope`), use:
 
 ```bash
-git pull
+git pull --ff-only
 npm ci
 npm run build
 set -a && source .env && set +a
 npm run db:push
 pm2 restart codeauditapp --update-env
+```
+
+Or run the helper script from this repo (recommended):
+
+```bash
+bash script/vps-deploy-update.sh /var/www/codeauditapp/codescope
+```
+
+Optional flags:
+
+```bash
+# skip db push
+RUN_DB_PUSH=0 bash script/vps-deploy-update.sh /var/www/codeauditapp/codescope
+
+# custom pm2 process name
+PM2_APP_NAME=my-app bash script/vps-deploy-update.sh /var/www/codeauditapp/codescope
 ```
 
 ## 8) Fixes for the most common deployment mistakes
