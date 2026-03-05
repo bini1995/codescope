@@ -1,137 +1,190 @@
 import type { NextFunction, Request, Response } from "express";
-import { timingSafeEqual, randomBytes, scryptSync, createHmac } from "crypto";
+import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
+import passport from "passport";
+import { Strategy as LocalStrategy } from "passport-local";
+import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
+import { pool } from "../db";
+import { storage } from "../storage";
 
-const TOKEN_COOKIE = "codescope_auth";
-const TOKEN_TTL_SECONDS = 60 * 60 * 24 * 14;
-const SECRET = process.env.AUTH_SECRET || "dev-auth-secret-change-me";
+const SESSION_IDLE_TIMEOUT_MS = parseInt(process.env.SESSION_IDLE_TIMEOUT_MS || "900000", 10);
+const SESSION_SECRET = process.env.SESSION_SECRET || process.env.AUTH_SECRET || "dev-session-secret-change-me";
+const isProduction = process.env.NODE_ENV === "production";
 
-function getCookieOptions(): {
-  httpOnly: true;
-  secure: boolean;
-  sameSite: "lax" | "none";
-  maxAge: number;
-  path: "/";
-} {
-  const crossSite = Boolean(process.env.FRONTEND_URL);
-  return {
+const PgSessionStore = connectPgSimple(session);
+
+export const sessionMiddleware = session({
+  store: new PgSessionStore({
+    pool,
+    createTableIfMissing: true,
+    tableName: "user_sessions",
+  }),
+  name: "codescope_sid",
+  secret: SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  rolling: true,
+  cookie: {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production" || crossSite,
-    sameSite: crossSite ? "none" : "lax",
-    maxAge: TOKEN_TTL_SECONDS * 1000,
+    secure: isProduction,
+    sameSite: "lax",
+    maxAge: SESSION_IDLE_TIMEOUT_MS,
     path: "/",
-  };
-}
+  },
+});
 
-type AuthPayload = {
-  sub: string;
-  email: string;
-  exp: number;
-};
+passport.use(
+  new LocalStrategy(
+    {
+      usernameField: "email",
+      passwordField: "password",
+      session: true,
+    },
+    async (email, password, done) => {
+      try {
+        const user = await storage.getUserByEmail(email);
+        if (!user) {
+          return done(null, false, { message: "Invalid credentials" });
+        }
 
-declare global {
-  namespace Express {
-    interface Request {
-      auth?: AuthPayload;
+        const valid = await verifyPassword(password, user.passwordHash);
+        if (!valid) {
+          return done(null, false, { message: "Invalid credentials" });
+        }
+
+        return done(null, { id: user.id, email: user.email });
+      } catch (_err) {
+        return done(null, false, { message: "Authentication failed" });
+      }
     }
-  }
-}
+  )
+);
 
-function b64url(input: Buffer | string) {
-  return Buffer.from(input)
-    .toString("base64")
-    .replace(/=/g, "")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_");
-}
+passport.serializeUser((user, done) => {
+  done(null, (user as { id: string }).id);
+});
 
-function signToken(payload: AuthPayload) {
-  const body = b64url(JSON.stringify(payload));
-  const sig = b64url(createHmac("sha256", SECRET).update(body).digest());
-  return `${body}.${sig}`;
-}
-
-function verifyToken(token: string): AuthPayload | null {
-  const [body, sig] = token.split(".");
-  if (!body || !sig) return null;
-  const expectedSig = b64url(createHmac("sha256", SECRET).update(body).digest());
-  const sameLength = sig.length === expectedSig.length;
-  if (!sameLength) return null;
-  const validSig = timingSafeEqual(Buffer.from(sig), Buffer.from(expectedSig));
-  if (!validSig) return null;
-
+passport.deserializeUser(async (id: string, done) => {
   try {
-    const normalizedBody = body.replace(/-/g, "+").replace(/_/g, "/");
-    const parsed = JSON.parse(Buffer.from(normalizedBody, "base64").toString("utf8")) as AuthPayload;
-    if (!parsed.sub || !parsed.email || parsed.exp < Math.floor(Date.now() / 1000)) {
-      return null;
+    const user = await storage.getUserById(id);
+    if (!user) {
+      return done(null, false);
     }
-    return parsed;
+
+    return done(null, { id: user.id, email: user.email });
   } catch {
-    return null;
+    return done(null, false);
   }
-}
+});
 
-export function hashPassword(password: string) {
+export const passportMiddleware = [passport.initialize(), passport.session()];
+
+export async function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
-  const hash = scryptSync(password, salt, 64).toString("hex");
-  return `${salt}:${hash}`;
+  const hash = scryptSync(password, salt, 64, { N: 16384, r: 8, p: 1 }).toString("hex");
+  return `scrypt$${salt}$${hash}`;
 }
 
-export function verifyPassword(password: string, passwordHash: string) {
-  const [salt, storedHash] = passwordHash.split(":");
-  if (!salt || !storedHash) return false;
-  const derived = scryptSync(password, salt, 64).toString("hex");
+export async function verifyPassword(password: string, passwordHash: string) {
+  const [algorithm, salt, storedHash] = passwordHash.split("$");
+  if (!algorithm || !salt || !storedHash || algorithm !== "scrypt") {
+    return false;
+  }
+
+  const derived = scryptSync(password, salt, 64, { N: 16384, r: 8, p: 1 }).toString("hex");
   if (derived.length !== storedHash.length) return false;
   return timingSafeEqual(Buffer.from(derived), Buffer.from(storedHash));
 }
 
-export function createAuthSession(res: Response, user: { id: string; email: string }) {
-  const token = signToken({
-    sub: user.id,
-    email: user.email,
-    exp: Math.floor(Date.now() / 1000) + TOKEN_TTL_SECONDS,
+function safeEqual(a: string, b: string) {
+  const aBuffer = Buffer.from(a);
+  const bBuffer = Buffer.from(b);
+  if (aBuffer.length !== bBuffer.length) return false;
+  return timingSafeEqual(aBuffer, bBuffer);
+}
+
+function regenerateSession(req: Request): Promise<void> {
+  return new Promise((resolve, reject) => {
+    req.session.regenerate((err) => {
+      if (err) return reject(err);
+      resolve();
+    });
+  });
+}
+
+function loginWithPassport(req: Request, user: { id: string; email: string }): Promise<void> {
+  return new Promise((resolve, reject) => {
+    req.login(user, (err) => {
+      if (err) return reject(err);
+      resolve();
+    });
+  });
+}
+
+export async function createAuthSession(req: Request, user: { id: string; email: string }) {
+  await regenerateSession(req);
+  await loginWithPassport(req, user);
+}
+
+export async function clearAuthSession(req: Request, res: Response) {
+  await new Promise<void>((resolve) => {
+    req.logout(() => resolve());
   });
 
-  res.cookie(TOKEN_COOKIE, token, getCookieOptions());
+  await new Promise<void>((resolve) => {
+    req.session.destroy(() => resolve());
+  });
+
+  res.clearCookie("codescope_sid", {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: "lax",
+    path: "/",
+  });
 }
 
-export function clearAuthSession(res: Response) {
-  const { maxAge: _maxAge, ...cookieOptions } = getCookieOptions();
-  res.clearCookie(TOKEN_COOKIE, cookieOptions);
-}
-
-function getCookieValue(req: Request, key: string) {
-  const cookieHeader = req.headers.cookie;
-  if (!cookieHeader) return undefined;
-  const pairs = cookieHeader.split(";").map((part) => part.trim());
-  for (const pair of pairs) {
-    const [k, ...rest] = pair.split("=");
-    if (k === key) return decodeURIComponent(rest.join("="));
-  }
-  return undefined;
+export function validateOauthState(req: Request, incomingState: string) {
+  const sessionState = req.session.githubOauthState;
+  if (!sessionState || !incomingState) return false;
+  return safeEqual(sessionState, incomingState);
 }
 
 export function optionalAuth(req: Request, _res: Response, next: NextFunction) {
-  const token = getCookieValue(req, TOKEN_COOKIE);
-  if (!token) return next();
-  const payload = verifyToken(token);
-  if (payload) {
-    req.auth = payload;
+  if (req.isAuthenticated() && req.user) {
+    const user = req.user as { id: string; email: string };
+    req.auth = { sub: user.id, email: user.email };
   }
   next();
 }
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
-  const token = getCookieValue(req, TOKEN_COOKIE);
-  if (!token) {
+  if (!req.isAuthenticated() || !req.user) {
     return res.status(401).json({ message: "Authentication required" });
   }
 
-  const payload = verifyToken(token);
-  if (!payload) {
-    return res.status(401).json({ message: "Invalid or expired session" });
-  }
-
-  req.auth = payload;
+  const user = req.user as { id: string; email: string };
+  req.auth = { sub: user.id, email: user.email };
   next();
+}
+
+declare global {
+  namespace Express {
+    interface User {
+      id: string;
+      email: string;
+    }
+
+    interface Request {
+      auth?: {
+        sub: string;
+        email: string;
+      };
+    }
+  }
+}
+
+declare module "express-session" {
+  interface SessionData {
+    githubOauthState?: string;
+  }
 }

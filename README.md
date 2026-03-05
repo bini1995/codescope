@@ -46,6 +46,10 @@ REPLIT_DEPLOYMENT=0
 
 # Frontend -> hosted backend URL (optional for local dev)
 VITE_API_BASE_URL=https://your-backend.example.com
+
+# Security (required in production)
+SESSION_SECRET=change-me
+DATA_ENCRYPTION_KEY=base64-or-hex-32-byte-key
 ```
 
 ### 3) Push database schema
@@ -72,3 +76,8 @@ If you want beta access to the expert audit service, contact: **beta@codeaudit.d
 ## Deployment
 - Railway + Neon backend deployment guide: `docs/deploy-railway-neon.md`.
 - Existing DigitalOcean deployment guide: `docs/deploy-digitalocean.md`.
+
+## Privacy & Retention
+- Privacy policy: `docs/privacy-policy.md`
+- Retention policy: `docs/retention-policy.md`
+- Self-service deletion endpoint: `POST /api/privacy/delete-my-data` with body `{ "confirmation": "DELETE" }` (authenticated).
