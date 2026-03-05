@@ -12,15 +12,13 @@ test("validateEnv requires production secrets", () => {
     /SESSION_SECRET \(or AUTH_SECRET\) is required in production/
   );
 
-  assert.throws(
-    () =>
-      validateEnv({
-        NODE_ENV: "production",
-        DATABASE_URL: "postgres://db",
-        SESSION_SECRET: "secret",
-      }),
-    /STRIPE_WEBHOOK_SECRET is required in production/
-  );
+  const parsed = validateEnv({
+    NODE_ENV: "production",
+    DATABASE_URL: "postgres://db",
+    SESSION_SECRET: "secret",
+  });
+
+  assert.equal(parsed.NODE_ENV, "production");
 });
 
 test("validateEnv accepts production env when required vars are present", () => {

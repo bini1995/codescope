@@ -61,10 +61,20 @@ if (!env.SKIP_STRIPE_INIT) {
   });
 }
 
+if (isProduction && !env.STRIPE_WEBHOOK_SECRET) {
+  console.warn(
+    "STRIPE_WEBHOOK_SECRET is not set; Stripe webhook signature verification is disabled until this is configured."
+  );
+}
+
 app.post(
   "/api/stripe/webhook",
   express.raw({ type: "application/json" }),
   async (req, res) => {
+    if (!env.STRIPE_WEBHOOK_SECRET) {
+      return res.status(503).json({ error: "Stripe webhook is not configured" });
+    }
+
     const signature = req.headers["stripe-signature"];
     if (!signature) {
       return res.status(400).json({ error: "Missing stripe-signature" });
