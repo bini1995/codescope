@@ -14,6 +14,18 @@ export function FindingCard({ finding, index, isPaid = true }: FindingCardProps)
   const [expanded, setExpanded] = useState(false);
   const category = CATEGORY_CONFIG[finding.category as keyof typeof CATEGORY_CONFIG];
   const effort = EFFORT_CONFIG[finding.effort as keyof typeof EFFORT_CONFIG];
+  const ownerSuggestion =
+    finding.category === "cicd" || finding.filePath?.includes(".github/")
+      ? "DevOps"
+      : finding.filePath?.includes("client/") || finding.filePath?.includes("frontend/")
+      ? "Frontend"
+      : "Backend";
+
+  const verificationSteps = [
+    "Apply the fix and add/adjust automated tests around the vulnerable path.",
+    "Run your app and reproduce the original behavior to ensure it no longer occurs.",
+    "Re-run the scan and confirm this finding no longer appears.",
+  ];
 
   return (
     <div
@@ -83,7 +95,7 @@ export function FindingCard({ finding, index, isPaid = true }: FindingCardProps)
           {isPaid && finding.codeSnippet && (
             <div>
               <h5 className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5 font-medium">
-                Evidence
+                Proof Artifact
               </h5>
               <pre className="text-xs font-mono bg-black/30 dark:bg-black/40 rounded-md p-3 overflow-x-auto text-foreground/70 border border-border/20">
                 <code>{finding.codeSnippet}</code>
@@ -126,6 +138,30 @@ export function FindingCard({ finding, index, isPaid = true }: FindingCardProps)
                 Unlock this audit to see step-by-step fix instructions for this finding.
               </p>
             </div>
+          )}
+
+          {isPaid && (
+            <>
+              <div>
+                <h5 className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5 font-medium">
+                  Suggested Owner
+                </h5>
+                <p className="text-sm text-foreground/80">{ownerSuggestion}</p>
+              </div>
+              <div>
+                <h5 className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5 font-medium">
+                  How to Verify the Fix
+                </h5>
+                <ul className="space-y-1">
+                  {verificationSteps.map((step) => (
+                    <li key={step} className="text-sm text-foreground/80 flex items-start gap-2">
+                      <span className="w-1 h-1 rounded-full bg-primary mt-2 flex-shrink-0" />
+                      {step}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </>
           )}
         </div>
       )}

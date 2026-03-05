@@ -39,6 +39,8 @@ import {
   CreditCard,
   Unlock,
   FileDown,
+  Download,
+  Gauge,
 } from "lucide-react";
 import type { Audit, Finding, RepoMeta, FileTreeItem, ScanLogEntry } from "@shared/schema";
 import { useState, useEffect } from "react";
@@ -47,6 +49,101 @@ type SeverityFilter = "all" | "critical" | "high" | "medium" | "low";
 type CategoryFilter = "all" | "security" | "stability" | "maintainability" | "scalability" | "cicd";
 
 type AuditWithPaid = Audit & { isPaid?: boolean };
+
+
+type EffortBucket = "1 hour" | "1 day" | "1 week";
+
+type FindingWithPriority = Finding & {
+  riskScore: number;
+  effortBucket: EffortBucket;
+  owner: "Frontend" | "Backend" | "DevOps";
+};
+
+const severityWeights: Record<string, number> = {
+  critical: 10,
+  high: 7,
+  medium: 4,
+  low: 2,
+};
+
+function getEffortBucket(effort: string): EffortBucket {
+  if (effort === "S") return "1 hour";
+  if (effort === "M") return "1 day";
+  return "1 week";
+}
+
+function getOwnerSuggestion(finding: Finding): "Frontend" | "Backend" | "DevOps" {
+  if (finding.category === "cicd" || finding.filePath?.includes(".github/")) return "DevOps";
+  if (finding.filePath?.includes("client/") || finding.filePath?.includes("frontend/")) return "Frontend";
+  return "Backend";
+}
+
+
+type MiniAuditStatus = "pass" | "fail" | "unknown";
+
+type MiniAuditCheck = {
+  key: string;
+  title: string;
+  owner: "Frontend" | "Backend" | "DevOps";
+  status: MiniAuditStatus;
+  reason: string;
+};
+
+type TicketDraft = {
+  finding: FindingWithPriority;
+  scope: string;
+  acceptanceCriteria: string[];
+};
+
+function findSignal(findings: Finding[], terms: string[]) {
+  const lowerTerms = terms.map((t) => t.toLowerCase());
+  return findings.find((f) => {
+    const corpus = `${f.title} ${f.description} ${f.fixSteps} ${f.filePath ?? ""}`.toLowerCase();
+    return lowerTerms.some((term) => corpus.includes(term));
+  });
+}
+
+function buildMiniAuditChecks(findings: Finding[]): MiniAuditCheck[] {
+  const checks = [
+    { key: "rate-limit", title: "Rate limiting in API edge", owner: "Backend" as const, terms: ["rate limit", "throttle"] },
+    { key: "csp", title: "Content-Security-Policy headers", owner: "Frontend" as const, terms: ["content-security-policy", "csp"] },
+    { key: "session", title: "Secure session cookie flags", owner: "Backend" as const, terms: ["session cookie", "secure cookie", "httponly", "samesite"] },
+    { key: "secret-scan", title: "Secret scanning in CI/CD", owner: "DevOps" as const, terms: ["secret scanning", "gitleaks", "secret", "github actions"] },
+    { key: "backups", title: "Backups + restore runbook", owner: "DevOps" as const, terms: ["backup", "restore", "rpo", "rto"] },
+  ];
+
+  return checks.map((check) => {
+    const hit = findSignal(findings, check.terms);
+    if (!hit) {
+      return {
+        key: check.key,
+        title: check.title,
+        owner: check.owner,
+        status: "unknown" as const,
+        reason: "No explicit signal found in this scan. Verify manually.",
+      };
+    }
+
+    return {
+      key: check.key,
+      title: check.title,
+      owner: check.owner,
+      status: hit.severity === "low" ? "pass" as const : "fail" as const,
+      reason:
+        hit.severity === "low"
+          ? `Observed low-risk signal in finding: ${hit.title}`
+          : `Gap detected in finding: ${hit.title}`,
+    };
+  });
+}
+
+function launchReadinessScore(audit: AuditWithPaid) {
+  const security = audit.securityScore ?? 0;
+  const stability = audit.stabilityScore ?? 0;
+  const operability = Math.round(((audit.maintainabilityScore ?? 0) + (audit.scalabilityScore ?? 0) + (audit.cicdScore ?? 0)) / 3);
+  const score = Math.round(security * 0.4 + stability * 0.35 + operability * 0.25);
+  return { score, security, stability, operability };
+}
 
 export default function AuditDetail() {
   const [, params] = useRoute("/audit/:id");
@@ -157,6 +254,94 @@ export default function AuditDetail() {
     high: findings?.filter((f) => f.severity === "high").length ?? 0,
     medium: findings?.filter((f) => f.severity === "medium").length ?? 0,
     low: findings?.filter((f) => f.severity === "low").length ?? 0,
+  };
+  const findingsWithPriority: FindingWithPriority[] = (findings ?? []).map((f) => {
+    const weight = severityWeights[f.severity] ?? 1;
+    const effortBucket = getEffortBucket(f.effort);
+    const effortDivisor = effortBucket === "1 hour" ? 1 : effortBucket === "1 day" ? 2 : 3;
+    return {
+      ...f,
+      effortBucket,
+      owner: getOwnerSuggestion(f),
+      riskScore: Math.max(1, Math.round((weight * 10) / effortDivisor)),
+    };
+  });
+
+  const topExistentialRisks = findingsWithPriority
+    .slice()
+    .sort((a, b) => b.riskScore - a.riskScore)
+    .slice(0, 3);
+
+  const quickestHighReduction = findingsWithPriority
+    .filter((f) => f.effortBucket === "1 hour" || f.effortBucket === "1 day")
+    .slice()
+    .sort((a, b) => b.riskScore - a.riskScore)
+    .slice(0, 5);
+
+  const byEffort = {
+    "1 hour": findingsWithPriority.filter((f) => f.effortBucket === "1 hour"),
+    "1 day": findingsWithPriority.filter((f) => f.effortBucket === "1 day"),
+    "1 week": findingsWithPriority.filter((f) => f.effortBucket === "1 week"),
+  };
+
+  const miniAuditChecks = buildMiniAuditChecks(findings ?? []);
+  const miniAuditSummary = {
+    pass: miniAuditChecks.filter((c) => c.status === "pass").length,
+    fail: miniAuditChecks.filter((c) => c.status === "fail").length,
+    unknown: miniAuditChecks.filter((c) => c.status === "unknown").length,
+  };
+
+  const ticketDrafts: TicketDraft[] = quickestHighReduction.map((finding) => ({
+    finding,
+    scope: `${finding.owner} team updates ${finding.filePath ?? "affected service"} and related tests.`,
+    acceptanceCriteria: [
+      `${finding.title} is no longer reproducible in QA/staging.`,
+      `Automated test coverage added/updated for this failure mode.`,
+      `Re-scan result no longer returns finding ${finding.id}.`,
+    ],
+  }));
+
+  const ninetyDayOutlook =
+    topExistentialRisks.length > 0
+      ? `If unchanged for 90 days, the highest likelihood failures are: ${topExistentialRisks
+          .map((risk) => risk.title.toLowerCase())
+          .join(", ")}. This creates outsized risk for customer trust, uptime, and delivery velocity.`
+      : "No critical degradation projected in 90 days from current findings.";
+
+  const downloadFile = (name: string, content: string, type = "text/plain") => {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportLinear = () => {
+    const payload = ticketDrafts
+      .map(
+        (ticket) =>
+          `- [ ] ${ticket.finding.title}
+  - Priority: ${ticket.finding.severity}
+  - Owner: ${ticket.finding.owner}
+  - Scope: ${ticket.scope}
+  - Acceptance criteria:
+${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
+      )
+      .join("\n\n");
+    downloadFile(`${audit?.repoName || "audit-report"}-linear-backlog.md`, payload || "No prioritized issues available");
+  };
+
+  const handleExportJira = () => {
+    const rows = ["Summary,Description,Priority,Labels,Owner,Acceptance Criteria"].concat(
+      ticketDrafts.map((ticket) =>
+        `"${ticket.finding.title}","${ticket.scope.replace(/"/g, '""')}","${ticket.finding.severity}","codescope-remediation ${ticket.finding.category}","${ticket.finding.owner}","${ticket.acceptanceCriteria.join("; ").replace(/"/g, '""')}"`
+      )
+    );
+    downloadFile(`${audit?.repoName || "audit-report"}-jira-backlog.csv`, rows.join("\n"), "text/csv");
   };
 
   const remediationPlan = audit?.remediationPlan as Array<{
@@ -300,6 +485,120 @@ export default function AuditDetail() {
               <FileDown className="w-3.5 h-3.5 mr-1.5" />
               {isGeneratingPdf ? "Preparing..." : "Generate PDF"}
             </Button>
+          </div>
+        )}
+
+
+        {isComplete && isPaid && (
+          <div className="grid gap-4 md:grid-cols-2" data-testid="section-executive-summary">
+            <div className="rounded-md border border-border/40 bg-card/30 p-4">
+              <h2 className="font-semibold text-sm mb-2">Executive Summary (One-Page)</h2>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {audit.executiveSummary || `This codebase shows ${findingCounts.critical} critical and ${findingCounts.high} high-risk issues requiring immediate focus. The fastest risk reduction comes from resolving configuration and auth-adjacent findings first, then tightening CI/CD controls. The roadmap below prioritizes changes that materially reduce outage and breach probability without stalling feature delivery.`}
+              </p>
+            </div>
+            <div className="rounded-md border border-border/40 bg-card/30 p-4">
+              <h2 className="font-semibold text-sm mb-2">What breaks in 90 days if unchanged</h2>
+              <p className="text-sm text-muted-foreground leading-relaxed">{ninetyDayOutlook}</p>
+            </div>
+            <div className="rounded-md border border-border/40 bg-card/30 p-4 md:col-span-2" data-testid="section-launch-readiness-score">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <h2 className="font-semibold text-sm">Launch Readiness Score</h2>
+                <span className="text-lg font-semibold flex items-center gap-1">
+                  <Gauge className="w-4 h-4 text-primary" />
+                  {launchReadinessScore(audit).score}/100
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mb-2">
+                Composite formula: 40% security + 35% stability + 25% operability (maintainability/scalability/CI-CD blend).
+              </p>
+              <div className="grid md:grid-cols-3 gap-2 text-xs">
+                <div className="border border-border/30 rounded p-2">Security: {launchReadinessScore(audit).security}</div>
+                <div className="border border-border/30 rounded p-2">Stability: {launchReadinessScore(audit).stability}</div>
+                <div className="border border-border/30 rounded p-2">Operability: {launchReadinessScore(audit).operability}</div>
+              </div>
+            </div>
+            <div className="rounded-md border border-border/40 bg-card/30 p-4 md:col-span-2" data-testid="section-cloud-mini-audit">
+              <h2 className="font-semibold text-sm mb-2">CI/CD + Cloud Posture Mini-Audit</h2>
+              <p className="text-xs text-muted-foreground mb-3">Fast checks for launch blockers: rate limiting, CSP, session cookies, secret scanning, and backups.</p>
+              <div className="grid gap-2">
+                {miniAuditChecks.map((check) => (
+                  <div key={check.key} className="border border-border/30 rounded p-2 text-xs flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-medium">{check.title}</p>
+                      <p className="text-muted-foreground">{check.reason}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className={`uppercase text-[10px] ${check.status === "pass" ? "text-emerald-400" : check.status === "fail" ? "text-red-400" : "text-yellow-400"}`}>{check.status}</span>
+                      <p className="text-muted-foreground">{check.owner}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">Pass: {miniAuditSummary.pass} • Fail: {miniAuditSummary.fail} • Unknown: {miniAuditSummary.unknown}</p>
+            </div>
+            <div className="rounded-md border border-border/40 bg-card/30 p-4 md:col-span-2" data-testid="section-ai-to-ticket">
+              <h2 className="font-semibold text-sm mb-2">AI-to-ticket remediation backlog</h2>
+              <p className="text-xs text-muted-foreground mb-3">Generated, scoped tasks with owner suggestions and acceptance criteria for immediate sprint planning.</p>
+              <div className="space-y-2">
+                {ticketDrafts.slice(0, 3).map((ticket) => (
+                  <div key={ticket.finding.id} className="border border-border/30 rounded p-2 text-xs">
+                    <p className="font-medium text-sm">{ticket.finding.title}</p>
+                    <p className="text-muted-foreground mb-1">{ticket.scope}</p>
+                    <ul className="space-y-0.5">
+                      {ticket.acceptanceCriteria.map((criterion) => (
+                        <li key={criterion} className="text-foreground/80">• {criterion}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-md border border-border/40 bg-card/30 p-4 md:col-span-2">
+              <h2 className="font-semibold text-sm mb-2">Top 3 Existential Risks</h2>
+              <div className="space-y-2">
+                {topExistentialRisks.map((risk) => (
+                  <div key={risk.id} className="text-sm flex items-center justify-between gap-2 border border-border/30 rounded p-2">
+                    <span>{risk.title}</span>
+                    <span className="text-xs text-muted-foreground">Risk score {risk.riskScore}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-md border border-border/40 bg-card/30 p-4 md:col-span-2">
+              <h2 className="font-semibold text-sm mb-2">Fastest fixes with highest risk reduction</h2>
+              <div className="grid gap-2 md:grid-cols-2">
+                {quickestHighReduction.map((fix) => (
+                  <div key={fix.id} className="border border-border/30 rounded p-2 text-xs">
+                    <p className="font-medium text-sm">{fix.title}</p>
+                    <p className="text-muted-foreground">{fix.effortBucket} • {fix.owner} • score {fix.riskScore}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-md border border-border/40 bg-card/30 p-4 md:col-span-2">
+              <h2 className="font-semibold text-sm mb-2">Prioritized remediation by effort</h2>
+              <div className="grid md:grid-cols-3 gap-3">
+                {(["1 hour", "1 day", "1 week"] as const).map((bucket) => (
+                  <div key={bucket} className="border border-border/30 rounded p-3">
+                    <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">{bucket}</h3>
+                    <ul className="space-y-1">
+                      {byEffort[bucket].slice(0, 4).map((item) => (
+                        <li key={item.id} className="text-xs text-foreground/80">• {item.title}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-md border border-border/40 bg-card/30 p-4 md:col-span-2 flex gap-2 flex-wrap">
+              <Button size="sm" variant="outline" onClick={handleExportJira} data-testid="button-export-jira">
+                <Download className="w-3.5 h-3.5 mr-1" /> Export Jira CSV
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleExportLinear} data-testid="button-export-linear">
+                <Download className="w-3.5 h-3.5 mr-1" /> Export Linear Markdown
+              </Button>
+            </div>
           </div>
         )}
 
