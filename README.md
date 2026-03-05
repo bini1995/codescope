@@ -77,7 +77,7 @@ If you want beta access to the expert audit service, contact: **beta@codeaudit.d
 
 ## Deployment
 - Railway + Neon backend deployment guide: `docs/deploy-railway-neon.md`.
-- Existing DigitalOcean deployment guide: `docs/deploy-digitalocean.md`.
+- Existing DigitalOcean deployment guide: `docs/deploy-digitalocean.md` (includes `script/vps-deploy-update.sh` for pull/build/restart deploys).
 
 ## Privacy & Retention
 - Privacy policy: `docs/privacy-policy.md`

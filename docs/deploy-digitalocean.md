@@ -176,12 +176,32 @@ systemctl status certbot.timer
 From server directory (`/var/www/codeauditapp/codescope`), use:
 
 ```bash
-git pull
-npm ci
+git pull --ff-only
+npm ci --include=dev
 npm run build
+npm prune --omit=dev
 set -a && source .env && set +a
 npm run db:push
 pm2 restart codeauditapp --update-env
+```
+
+Or run the helper script from this repo (recommended):
+
+```bash
+bash script/vps-deploy-update.sh /var/www/codeauditapp/codescope
+```
+
+Optional flags:
+
+```bash
+# skip db push
+RUN_DB_PUSH=0 bash script/vps-deploy-update.sh /var/www/codeauditapp/codescope
+
+# custom pm2 process name
+PM2_APP_NAME=my-app bash script/vps-deploy-update.sh /var/www/codeauditapp/codescope
+
+# if you explicitly do not want dev deps installed during deploy
+INSTALL_DEV_DEPS=0 bash script/vps-deploy-update.sh /var/www/codeauditapp/codescope
 ```
 
 ## 8) Fixes for the most common deployment mistakes
@@ -208,8 +228,9 @@ AUTH_SECRET='REPLACE_WITH_LONG_RANDOM_SECRET'
 REPLIT_DOMAINS='codeauditapp.com,www.codeauditapp.com'
 ENV
 
-npm ci
+npm ci --include=dev
 npm run build
+npm prune --omit=dev
 
 # make env variables available to drizzle + app startup
 set -a
@@ -282,7 +303,28 @@ curl -I http://127.0.0.1:5000
 If you are not using Neon, this specific error does not apply; instead verify your provider allows inbound connections from your Droplet.
 
 
-### F) `password authentication failed for user 'neondb_owner'` (Postgres code `28P01`)
+
+### F) `npm run build` fails with `sh: 1: tsx: not found`
+
+This usually means the server installed only production deps, but your build uses `tsx` from `devDependencies`.
+
+Fix:
+
+```bash
+cd /var/www/codeauditapp/codescope
+npm ci --include=dev
+npm run build
+npm prune --omit=dev
+pm2 restart codeauditapp --update-env
+```
+
+Or use the helper script (default behavior now installs dev deps for build and prunes after):
+
+```bash
+bash script/vps-deploy-update.sh /var/www/codeauditapp/codescope
+```
+
+### G) `password authentication failed for user 'neondb_owner'` (Postgres code `28P01`)
 
 This means host/network is reachable, but your DB password is wrong.
 
