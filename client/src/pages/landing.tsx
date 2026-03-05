@@ -58,6 +58,7 @@ export default function Landing() {
   const [showRepos, setShowRepos] = useState(false);
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
   const [authForm, setAuthForm] = useState({ fullName: "", email: "", password: "" });
+  const [showSampleReport, setShowSampleReport] = useState(false);
 
   const { data: repos } = useQuery<GHRepo[]>({
     queryKey: ["/api/github/repos"],
@@ -95,6 +96,10 @@ export default function Landing() {
       stack: repo.language || prev.stack,
     }));
     setShowRepos(false);
+  };
+
+  const handleGithubOAuth = () => {
+    window.location.href = "/api/auth/github";
   };
 
   const handlePickRepo = () => {
@@ -299,6 +304,26 @@ export default function Landing() {
               Missing CI/CD
             </span>
           </div>
+
+        {showSampleReport && (
+          <div className="mt-3 rounded-md border border-border/40 bg-background/70 p-3" data-testid="sample-report-preview">
+            <h4 className="text-sm font-semibold mb-2">Sample Report Preview</h4>
+            <div className="grid gap-2 md:grid-cols-2 text-xs">
+              <div className="rounded border border-border/30 p-2">
+                <p className="font-medium mb-1">Executive Summary</p>
+                <p className="text-muted-foreground">Primary launch risk is auth/session hardening and deployment safety checks. Addressing 4 high-impact items in week 1 cuts projected outage/security exposure materially.</p>
+              </div>
+              <div className="rounded border border-border/30 p-2">
+                <p className="font-medium mb-1">Top 3 Existential Risks</p>
+                <ul className="space-y-1 text-muted-foreground">
+                  <li>• Unprotected admin actions</li>
+                  <li>• Missing CI secret scanning</li>
+                  <li>• No API rate limiting</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
         </div>
       </section>
 
@@ -343,8 +368,8 @@ export default function Landing() {
             {[
               {
                 step: "1",
-                title: "Submit Your Repo",
-                desc: "Paste your GitHub repository URL or pick from your connected repos. We analyze public and private repositories.",
+                title: "Connect Your Repo",
+                desc: "Connect GitHub and choose a repository directly. No copy/paste or manual URL mistakes.",
                 icon: <GitFork className="w-5 h-5" />,
               },
               {
@@ -477,6 +502,20 @@ export default function Landing() {
         </div>
       </section>
 
+      <section className="pb-8 px-4 sm:px-6">
+        <div className="max-w-xl mx-auto rounded-md border border-emerald-500/30 bg-emerald-500/5 p-4" data-testid="sample-report-callout">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="font-semibold text-sm">See a sample report instantly</h3>
+              <p className="text-xs text-muted-foreground mt-1">Preview an executive summary, top risks, and a prioritized fix roadmap before connecting your repo.</p>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => setShowSampleReport((prev) => !prev)} data-testid="button-view-sample-report">
+              {showSampleReport ? "Hide Sample" : "View Sample"}
+            </Button>
+          </div>
+        </div>
+      </section>
+
       <section id="intake-form" className="pb-24 px-4 sm:px-6">
         <div className="max-w-xl mx-auto">
           <div className="text-center mb-8">
@@ -493,7 +532,7 @@ export default function Landing() {
             className="space-y-4 rounded-md border border-border/40 bg-card/30 p-6"
           >
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">GitHub Repository URL</label>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Connected Repository</label>
               <div className="flex gap-2">
                 <Input
                   data-testid="input-repo-url"
@@ -512,7 +551,7 @@ export default function Landing() {
                   className="flex-shrink-0 text-xs"
                 >
                   <GitFork className="w-3.5 h-3.5 mr-1" />
-                  Pick
+                  Connect repo
                 </Button>
               </div>
             </div>
@@ -632,7 +671,7 @@ export default function Landing() {
                 />
                 <Button
                   type="button"
-                  className="w-full"
+                  className="w-full mb-2"
                   onClick={async () => {
                     try {
                       if (authMode === "signup") {
@@ -647,6 +686,9 @@ export default function Landing() {
                   }}
                 >
                   {authMode === "signup" ? "Create account" : "Sign in"}
+                </Button>
+                <Button type="button" variant="outline" className="w-full" onClick={handleGithubOAuth} data-testid="button-github-auth">
+                  Sign in with GitHub
                 </Button>
               </div>
             )}

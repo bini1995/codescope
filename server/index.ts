@@ -98,6 +98,18 @@ app.use(express.urlencoded({ extended: false }));
 app.use(sessionMiddleware);
 app.use(...passportMiddleware);
 
+const cspPolicy = [
+  "default-src 'self'",
+  "script-src 'self' https://js.stripe.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: https:",
+  "connect-src 'self' https://api.stripe.com",
+  "frame-src https://js.stripe.com https://hooks.stripe.com",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "frame-ancestors 'none'",
+].join("; ");
+
 app.use((_req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
@@ -105,6 +117,7 @@ app.use((_req, res, next) => {
   res.setHeader("X-DNS-Prefetch-Control", "off");
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
   res.setHeader("Cross-Origin-Resource-Policy", "same-site");
+  res.setHeader("Content-Security-Policy", cspPolicy);
   res.setHeader(
     "Permissions-Policy",
     "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
@@ -145,6 +158,10 @@ const allowedOrigins = [
 
 const allowedOriginSet = new Set(allowedOrigins);
 
+if (isProduction && allowedOriginSet.size === 0) {
+  throw new Error("CORS allowlist is empty in production. Set FRONTEND_URL or CORS_ALLOWED_ORIGINS.");
+}
+
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (origin && allowedOriginSet.has(origin)) {
@@ -175,10 +192,14 @@ app.use("/api", (req, res, next) => {
 
   if (!current || current.expiresAt <= now) {
     ipRequestCounts.set(key, { count: 1, expiresAt: now + RATE_LIMIT_WINDOW_MS });
+    res.setHeader("X-RateLimit-Limit", RATE_LIMIT_MAX_REQUESTS.toString());
+    res.setHeader("X-RateLimit-Remaining", Math.max(0, RATE_LIMIT_MAX_REQUESTS - 1).toString());
     return next();
   }
 
   current.count += 1;
+  res.setHeader("X-RateLimit-Limit", RATE_LIMIT_MAX_REQUESTS.toString());
+  res.setHeader("X-RateLimit-Remaining", Math.max(0, RATE_LIMIT_MAX_REQUESTS - current.count).toString());
   if (current.count > RATE_LIMIT_MAX_REQUESTS) {
     const retryAfterSeconds = Math.max(1, Math.ceil((current.expiresAt - now) / 1000));
     res.setHeader("Retry-After", retryAfterSeconds.toString());
