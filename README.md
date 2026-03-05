@@ -7,15 +7,17 @@ Professional codebase audit platform for fast-moving SaaS teams that want expert
 - **Positioning**: high-ticket expert service for founders and startup teams that need confidence before scaling.
 - **Delivery model (current)**: expert-led code audit with prioritized report and remediation guidance.
 
-## Pricing Model (Locked)
-To match current product maturity and customer needs:
+## Pricing Model
+Productized for fast purchase decisions and rapid time-to-value:
 
-1. **Instant Automated Scan — $99 one-time (coming soon)**
-   - Self-serve, lightweight scan path for quick signal.
-2. **Expert Code Audit — $1,500 per audit (current focus)**
-   - Manual intake + expert review + detailed report.
+1. **Quick Triage — $499**
+   - 45–60 minute session, top 10 risks, short walkthrough call.
+2. **Full Audit — $1,500**
+   - Detailed report + remediation roadmap with expert context.
+3. **Fix Sprint — $3,000**
+   - Implementation of top fixes with production-ready pull requests.
 
-> Why this split: fully automated scanner pricing in the market is typically lower, while manual/expert audits command premium project-based pricing.
+Each engagement starts with an instant scan preview (repo metadata, file tree, 10 heuristic checks, and sample findings), then upgrades into expert review and optional implementation support.
 
 ## Tech Stack
 - **Frontend**: React, TypeScript, Vite, Tailwind CSS, shadcn/ui
@@ -94,4 +96,3 @@ If you want beta access to the expert audit service, contact: **beta@codeaudit.d
 - Prettier and ESLint are enforced in CI (`format:check` + `lint`).
 - A Git pre-commit hook under `.githooks/pre-commit` auto-formats/lints staged files and re-adds them to the commit.
 - Install hooks locally with `npm run hooks:install` (also runs automatically on `npm install` via `prepare`).
-

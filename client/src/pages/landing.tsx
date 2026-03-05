@@ -164,11 +164,11 @@ export default function Landing() {
   ];
 
   const audienceList = [
-    "Indie hackers & solo founders",
-    "Bootstrapped SaaS teams",
-    "AI/ML built MVPs",
-    "Vibe-coded platforms",
-    "Early-stage startups ready to scale",
+    "Founders shipping AI-generated apps before launch",
+    "Agencies building MVPs across multiple client repos",
+    "Small teams post-funding that need reliability now",
+    "Teams preparing for enterprise pilots or procurement reviews",
+    "Engineering leads doing pre-launch or post-incident hardening",
   ];
 
   const trustTools = [
@@ -182,23 +182,23 @@ export default function Landing() {
 
   const pricingTiers = [
     {
-      name: "Instant Automated Scan",
-      price: "$99",
-      desc: "Self-serve scan path for quick triage (shipping soon)",
+      name: "Quick Triage",
+      price: "$499",
+      desc: "45–60 minute expert triage with top risks and immediate actions",
       features: [
-        "One-time automated repository scan",
-        "Risk score snapshot",
-        "Top findings with severity ranking",
-        "Basic remediation guidance",
-        "Ideal for early validation before a manual audit",
+        "45–60 minute expert review session",
+        "Top 10 launch-blocking risks identified",
+        "Short walkthrough call + prioritized actions",
+        "Fast summary delivered within 24 hours",
+        "Best for founders needing fast decision support",
       ],
-      cta: "Get $99 Scan",
+      cta: "Book $499 Triage",
       popular: false,
     },
     {
-      name: "Expert Code Audit",
+      name: "Full Audit",
       price: "$1,500",
-      desc: "Most popular: manual expert review + prioritized remediation report",
+      desc: "Comprehensive report and remediation roadmap for launch confidence",
       features: [
         "Human-led codebase security + architecture review",
         "Executive summary + business impact analysis",
@@ -208,6 +208,20 @@ export default function Landing() {
       ],
       cta: "Book $1,500 Audit",
       popular: true,
+    },
+    {
+      name: "Fix Sprint",
+      price: "$3,000",
+      desc: "Hands-on implementation sprint where we ship PRs for your top issues",
+      features: [
+        "Everything in Full Audit",
+        "Implementation of the highest-priority fixes",
+        "Production-ready pull requests with rationale",
+        "Before/after risk summary for stakeholders",
+        "Ideal when your team needs execution, not just advice",
+      ],
+      cta: "Start $3,000 Sprint",
+      popular: false,
     },
   ];
 
@@ -267,8 +281,8 @@ export default function Landing() {
           </h1>
 
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-6 leading-relaxed" data-testid="text-hero-subtitle">
-            Professional codebase audits for AI-built SaaS & vibe-coded startups.
-            Find and fix real flaws before they break your product.
+            Productized expert audits for AI-built SaaS teams.
+            Get fast signal with an instant preview, then expert context and implementation support.
           </p>
 
           <p className="text-sm text-muted-foreground/70 mb-8">
@@ -368,20 +382,20 @@ export default function Landing() {
             {[
               {
                 step: "1",
-                title: "Connect Your Repo",
-                desc: "Connect GitHub and choose a repository directly. No copy/paste or manual URL mistakes.",
+                title: "Run Instant Scan Preview",
+                desc: "Immediately get repo metadata, file tree visibility, 10 heuristic checks, and sample findings.",
                 icon: <GitFork className="w-5 h-5" />,
               },
               {
                 step: "2",
-                title: "We Audit Your Code",
-                desc: "Security, stability, dependencies, architecture — our scanner fetches your file tree and detects real patterns with queue-backed processing.",
+                title: "Add Expert Review",
+                desc: "Upgrade to expert analysis for architecture context, infra risks, and business-priority remediation sequencing.",
                 icon: <Scan className="w-5 h-5" />,
               },
               {
                 step: "3",
-                title: "Get Your Report",
-                desc: "Receive a prioritized report with severity-ranked findings, code evidence, business impact, fix steps, and a remediation roadmap.",
+                title: "Ship Fixes Fast",
+                desc: "Pick a fix sprint when needed and receive implementation-focused PRs for your highest-risk issues.",
                 icon: <FileText className="w-5 h-5" />,
               },
             ].map((item, i) => (
@@ -448,16 +462,42 @@ export default function Landing() {
         </div>
       </section>
 
+      <section className="pb-16 px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="rounded-md border border-border/40 bg-card/20 p-6">
+            <h3 className="text-lg font-semibold mb-2" data-testid="text-preview-title">Instant Scan Preview (included before expert upsell)</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Every engagement starts with quick, tangible value so buyers can see risk signal before committing to deeper work.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+              {[
+                "Repository metadata snapshot",
+                "File tree + hot spots overview",
+                "10 heuristic checks across common failure modes",
+                "Sample findings to frame next best action",
+              ].map((item, idx) => (
+                <div key={idx} className="rounded border border-border/40 bg-background/50 p-3" data-testid={`preview-item-${idx}`}>
+                  <div className="flex items-start gap-2">
+                    <Check className="w-3.5 h-3.5 text-emerald-500 mt-0.5" />
+                    <span>{item}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section id="pricing" className="pb-20 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-bold mb-3" data-testid="text-pricing-title">Choose Your Audit Path</h2>
             <p className="text-muted-foreground text-sm max-w-md mx-auto">
-              Start with an accessible automated option or move straight to a manual expert audit.
+              Productized offers designed for fast decisions and immediate risk reduction.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {pricingTiers.map((tier, i) => (
               <div
                 key={i}
@@ -512,6 +552,22 @@ export default function Landing() {
             <Button size="sm" variant="outline" onClick={() => setShowSampleReport((prev) => !prev)} data-testid="button-view-sample-report">
               {showSampleReport ? "Hide Sample" : "View Sample"}
             </Button>
+          </div>
+        </div>
+      </section>
+
+      <section className="pb-14 px-4 sm:px-6">
+        <div className="max-w-4xl mx-auto">
+          <h3 className="text-lg font-semibold text-center mb-4" data-testid="text-offer-modes">Urgent audit modes</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="rounded-md border border-border/40 bg-card/20 p-4" data-testid="card-prelaunch-audit">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Pre-launch Audit</p>
+              <p className="text-sm text-foreground/90">For teams shipping soon that need confidence on security, stability, and deployment readiness before release.</p>
+            </div>
+            <div className="rounded-md border border-border/40 bg-card/20 p-4" data-testid="card-postincident-audit">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Post-incident Audit</p>
+              <p className="text-sm text-foreground/90">For teams recovering from outages or security events that need root-cause hardening and remediation priorities.</p>
+            </div>
           </div>
         </div>
       </section>
