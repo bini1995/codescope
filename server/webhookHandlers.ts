@@ -2,6 +2,8 @@ import Stripe from "stripe";
 import { getStripeSync, getUncachableStripeClient } from "./stripeClient";
 import { storage } from "./storage";
 
+type WebhookEventStorage = Pick<typeof storage, "recordStripeWebhookEvent" | "processPaidCheckoutWebhookEvent">;
+
 function getWebhookSecret(): string {
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!secret) {
@@ -25,38 +27,42 @@ export class WebhookHandlers {
     const sync = await getStripeSync();
     await sync.processWebhook(payload, signature);
 
-    if (event.type !== "checkout.session.completed") {
-      await storage.recordStripeWebhookEvent({
-        eventId: event.id,
-        eventType: event.type,
-        status: "processed",
-      });
-      return;
+    const processed = await processStripeWebhookTransition(event, storage);
+
+    if (processed) {
+      console.log(`Checkout webhook ${event.id} unlocked an audit payment`);
     }
+  }
+}
 
-    const session = event.data.object as Stripe.Checkout.Session;
-    const auditId = session.metadata?.auditId;
+export async function processStripeWebhookTransition(event: Stripe.Event, webhookStorage: WebhookEventStorage): Promise<boolean> {
+  if (event.type !== "checkout.session.completed") {
+    await webhookStorage.recordStripeWebhookEvent({
+      eventId: event.id,
+      eventType: event.type,
+      status: "processed",
+    });
+    return false;
+  }
 
-    if (!auditId || session.payment_status !== "paid" || !session.id) {
-      await storage.recordStripeWebhookEvent({
-        eventId: event.id,
-        eventType: event.type,
-        auditId,
-        stripeSessionId: session.id,
-        status: "ignored",
-      });
-      return;
-    }
+  const session = event.data.object as Stripe.Checkout.Session;
+  const auditId = session.metadata?.auditId;
 
-    const processed = await storage.processPaidCheckoutWebhookEvent({
+  if (!auditId || session.payment_status !== "paid" || !session.id) {
+    await webhookStorage.recordStripeWebhookEvent({
       eventId: event.id,
       eventType: event.type,
       auditId,
       stripeSessionId: session.id,
+      status: "ignored",
     });
-
-    if (processed) {
-      console.log(`Audit ${auditId} unlocked via webhook payment`);
-    }
+    return false;
   }
+
+  return webhookStorage.processPaidCheckoutWebhookEvent({
+    eventId: event.id,
+    eventType: event.type,
+    auditId,
+    stripeSessionId: session.id,
+  });
 }

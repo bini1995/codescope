@@ -6,12 +6,15 @@ import { runMigrations } from "stripe-replit-sync";
 import { getStripeSync } from "./stripeClient";
 import { WebhookHandlers } from "./webhookHandlers";
 import { passportMiddleware, sessionMiddleware } from "./middleware/auth";
+import { validateEnv } from "./env";
+
+const env = validateEnv();
 
 const app = express();
 const httpServer = createServer(app);
 
-const isProduction = process.env.NODE_ENV === "production";
-const trustProxy = process.env.TRUST_PROXY;
+const isProduction = env.NODE_ENV === "production";
+const trustProxy = env.TRUST_PROXY;
 app.set(
   "trust proxy",
   typeof trustProxy === "string"
@@ -28,10 +31,7 @@ declare module "http" {
 }
 
 async function initStripe() {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    throw new Error("DATABASE_URL required for Stripe integration");
-  }
+  const databaseUrl = env.DATABASE_URL;
 
   try {
     console.log("Initializing Stripe schema...");
@@ -40,7 +40,7 @@ async function initStripe() {
 
     const stripeSync = await getStripeSync();
 
-    const webhookBaseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
+    const webhookBaseUrl = `https://${env.REPLIT_DOMAINS?.split(",")[0]}`;
     const result = await stripeSync.findOrCreateManagedWebhook(
       `${webhookBaseUrl}/api/stripe/webhook`
     );
@@ -55,9 +55,11 @@ async function initStripe() {
   }
 }
 
-initStripe().catch((error) => {
-  console.error("Unhandled Stripe initialization error:", error);
-});
+if (!env.SKIP_STRIPE_INIT) {
+  initStripe().catch((error) => {
+    console.error("Unhandled Stripe initialization error:", error);
+  });
+}
 
 app.post(
   "/api/stripe/webhook",
@@ -121,19 +123,19 @@ const devOrigins = [
   "http://127.0.0.1:5173",
 ];
 
-const replitDomains = (process.env.REPLIT_DOMAINS || "")
+const replitDomains = (env.REPLIT_DOMAINS || "")
   .split(",")
   .map((domain) => domain.trim())
   .filter(Boolean)
   .map((domain) => `https://${domain}`);
 
-const railwayDomain = process.env.RAILWAY_PUBLIC_DOMAIN
-  ? [`https://${process.env.RAILWAY_PUBLIC_DOMAIN.trim()}`]
+const railwayDomain = env.RAILWAY_PUBLIC_DOMAIN
+  ? [`https://${env.RAILWAY_PUBLIC_DOMAIN.trim()}`]
   : [];
 
 const allowedOrigins = [
-  ...(process.env.FRONTEND_URL || "").split(","),
-  ...(process.env.CORS_ALLOWED_ORIGINS || "").split(","),
+  ...(env.FRONTEND_URL || "").split(","),
+  ...(env.CORS_ALLOWED_ORIGINS || "").split(","),
   ...replitDomains,
   ...railwayDomain,
   ...devOrigins,
@@ -162,8 +164,8 @@ app.use((req, res, next) => {
   next();
 });
 
-const RATE_LIMIT_WINDOW_MS = parseInt(process.env.RATE_LIMIT_WINDOW_MS || "60000", 10);
-const RATE_LIMIT_MAX_REQUESTS = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "120", 10);
+const RATE_LIMIT_WINDOW_MS = env.RATE_LIMIT_WINDOW_MS;
+const RATE_LIMIT_MAX_REQUESTS = env.RATE_LIMIT_MAX_REQUESTS;
 const ipRequestCounts = new Map<string, { count: number; expiresAt: number }>();
 
 app.use("/api", (req, res, next) => {
@@ -246,14 +248,14 @@ app.use((req, res, next) => {
     return res.status(status).json({ message });
   });
 
-  if (process.env.NODE_ENV === "production") {
+  if (env.NODE_ENV === "production") {
     serveStatic(app);
   } else {
     const { setupVite } = await import("./vite");
     await setupVite(httpServer, app);
   }
 
-  const port = parseInt(process.env.PORT || "5000", 10);
+  const port = env.PORT;
   httpServer.listen(
     {
       port,
