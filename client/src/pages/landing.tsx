@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
+import { SCAN_LIMITS, formatRepoSizeLimitMb } from "@shared/scan-limits";
 import {
   Shield,
   Zap,
@@ -349,7 +350,7 @@ export default function Landing() {
               {
                 step: "2",
                 title: "We Audit Your Code",
-                desc: "Security, stability, dependencies, architecture — our scanner fetches your file tree and detects real patterns across 80+ files.",
+                desc: "Security, stability, dependencies, architecture — our scanner fetches your file tree and detects real patterns with queue-backed processing.",
                 icon: <Scan className="w-5 h-5" />,
               },
               {
@@ -369,6 +370,10 @@ export default function Landing() {
               </div>
             ))}
           </div>
+          <div className="mt-5 rounded-md border border-border/40 bg-background/40 px-4 py-3 text-xs text-muted-foreground">
+            Scan limits: up to <span className="font-medium text-foreground">{SCAN_LIMITS.maxFilesToScan.toLocaleString()} files</span> and <span className="font-medium text-foreground">{formatRepoSizeLimitMb()}</span> repository size per scan.
+          </div>
+
           <div className="flex justify-center mt-8">
             <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground/40">
               <span className="px-3 py-1 rounded border border-border/30">Submit</span>

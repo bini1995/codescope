@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { FindingCard } from "@/components/finding-card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { SCAN_LIMITS, formatRepoSizeLimitMb } from "@shared/scan-limits";
 import {
   Code2,
   ArrowLeft,
@@ -381,6 +382,9 @@ export default function AuditDetail() {
               <RefreshCw className="w-4 h-4 text-blue-400 animate-spin" />
               <h2 className="font-semibold text-sm text-blue-400">Scan In Progress</h2>
             </div>
+            <p className="text-xs text-blue-100/80 mb-3">
+              Queue-backed scan limits: {SCAN_LIMITS.maxFilesToScan.toLocaleString()} files and {formatRepoSizeLimitMb()} repository size.
+            </p>
             {scanLog && scanLog.length > 0 && (
               <div className="space-y-1">
                 {scanLog.map((entry, i) => (

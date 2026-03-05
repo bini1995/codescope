@@ -1,6 +1,7 @@
 import { getUncachableGitHubClient } from "./github";
 import { storage } from "./storage";
 import type { InsertFinding, RepoMeta, FileTreeItem, ScanLogEntry } from "@shared/schema";
+import { SCAN_LIMITS } from "@shared/scan-limits";
 
 const SECRET_PATTERNS = [
   { pattern: /(?:sk_live_|sk_test_)[a-zA-Z0-9]{20,}/g, name: "Stripe Secret Key", severity: "critical" as const },
@@ -174,6 +175,13 @@ function truncateSnippet(content: string, lineNum: number, contextLines: number 
   return lines.slice(start, end).map((l, i) => `${start + i + 1} | ${l}`).join("\n");
 }
 
+
+function buildFileTreeCacheKey(owner: string, repo: string, sha: string): string {
+  return `${owner}/${repo}@${sha}`;
+}
+
+const fileTreeCache = new Map<string, FileTreeItem[]>();
+
 export async function scanRepository(auditId: string): Promise<void> {
   const audit = await storage.getAudit(auditId);
   if (!audit) throw new Error("Audit not found");
@@ -235,23 +243,70 @@ export async function scanRepository(auditId: string): Promise<void> {
         tree_sha: repoData.default_branch,
         recursive: "true",
       });
-      tree = treeData.tree
-        .filter((t) => t.type === "blob" || t.type === "tree")
-        .map((t) => ({
-          path: t.path || "",
-          type: t.type === "blob" ? "file" as const : "dir" as const,
-          size: t.size,
-        }));
-      addLog("file_tree", "ok", `Found ${tree.length} files/directories`);
+      const scanSha = treeData.sha;
+      const treeCacheKey = buildFileTreeCacheKey(audit.ownerName, audit.repoName, scanSha);
+      const cachedTree = fileTreeCache.get(treeCacheKey);
+      if (cachedTree) {
+        tree = cachedTree;
+        addLog("file_tree", "ok", `Loaded cached file tree for commit ${scanSha.slice(0, 7)} (${tree.length} entries)`);
+      } else {
+        tree = treeData.tree
+          .filter((t) => t.type === "blob" || t.type === "tree")
+          .map((t) => ({
+            path: t.path || "",
+            type: t.type === "blob" ? "file" as const : "dir" as const,
+            size: t.size,
+            sha: t.sha,
+          }));
+        fileTreeCache.set(treeCacheKey, tree);
+        addLog("file_tree", "ok", `Found ${tree.length} files/directories at commit ${scanSha.slice(0, 7)}`);
+      }
     } catch (err: any) {
       addLog("file_tree", "error", `Cannot fetch file tree: ${err.message}`);
     }
 
     await storage.updateAudit(auditId, { fileTree: tree, scanLog: log });
 
+    if (repoMeta.size > SCAN_LIMITS.maxRepoSizeKb) {
+      addLog(
+        "repo_limits",
+        "warn",
+        `Repository is ${repoMeta.size} KB. Limit is ${SCAN_LIMITS.maxRepoSizeKb} KB. Skipping deep scan and returning metadata-only results.`
+      );
+      await storage.updateAudit(auditId, {
+        status: "complete",
+        scanLog: log,
+        scannedAt: new Date(),
+        executiveSummary: `Repository exceeds the supported scan size limit (${SCAN_LIMITS.maxRepoSizeKb} KB). We captured metadata only to avoid API timeouts/rate-limit failures.`,
+      });
+      return;
+    }
+
+    if (tree.length > SCAN_LIMITS.maxTreeEntries) {
+      addLog(
+        "repo_limits",
+        "warn",
+        `Repository tree has ${tree.length} entries. Limit is ${SCAN_LIMITS.maxTreeEntries}. Skipping deep scan and returning metadata-only results.`
+      );
+      await storage.updateAudit(auditId, {
+        status: "complete",
+        scanLog: log,
+        scannedAt: new Date(),
+        executiveSummary: `Repository file tree exceeds the supported scan limit (${SCAN_LIMITS.maxTreeEntries} entries). We captured metadata only to keep scans reliable.`,
+      });
+      return;
+    }
+
     const allFindings: Omit<InsertFinding, "auditId">[] = [];
 
     const files = tree.filter((t) => t.type === "file");
+    if (files.length > SCAN_LIMITS.maxFilesToScan) {
+      addLog(
+        "repo_limits",
+        "warn",
+        `Repository has ${files.length} files. Processing first ${SCAN_LIMITS.maxFilesToScan} files for reliability.`
+      );
+    }
 
     for (const sensitiveFile of SENSITIVE_FILES) {
       const match = files.find((f) =>
@@ -339,8 +394,8 @@ export async function scanRepository(auditId: string): Promise<void> {
     }
 
     const scannableFiles = files
-      .filter((f) => shouldScanFile(f.path) && (f.size ?? 0) < 200000)
-      .slice(0, 80);
+      .filter((f) => shouldScanFile(f.path) && (f.size ?? 0) < SCAN_LIMITS.maxFileSizeBytes)
+      .slice(0, Math.min(SCAN_LIMITS.maxPatternScanFiles, SCAN_LIMITS.maxFilesToScan));
 
     addLog("scan_files", "ok", `Scanning ${scannableFiles.length} files for patterns`);
     await storage.updateAudit(auditId, { scanLog: log });

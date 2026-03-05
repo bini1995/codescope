@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { insertAuditSchema, insertFindingSchema } from "@shared/schema";
 import { getUncachableGitHubClient } from "./github";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
-import { scanRepository } from "./scanner";
+import { enqueueScan } from "./scanQueue";
 import { seedStripeProducts } from "./stripe-seed";
 import { z } from "zod";
 import { db } from "./db";
@@ -256,11 +256,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const jobId = audit.id;
 
     if (triggerScan) {
-      setTimeout(() => {
-        scanRepository(jobId).catch((err) => {
-          console.error(`Async submit-audit scan failed for ${jobId}:`, err);
-        });
-      }, 100);
+      const queueResult = enqueueScan(jobId);
+      return res.status(202).json({
+        jobId,
+        auditId: audit.id,
+        status: "queued",
+        queuePosition: queueResult.position,
+      });
     }
 
     return res.status(202).json({ jobId, auditId: audit.id, status: "queued" });
@@ -339,10 +341,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       req.auth!.sub
     );
 
-    res.json({ message: "Scan started", auditId: audit.id });
-
-    scanRepository(audit.id).catch((err) => {
-      console.error(`Scan failed for audit ${audit.id}:`, err);
+    const queueResult = enqueueScan(audit.id);
+    res.json({
+      message: queueResult.queued ? "Scan queued" : "Scan already queued",
+      auditId: audit.id,
+      queuePosition: queueResult.position,
     });
   });
 

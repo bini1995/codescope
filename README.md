@@ -81,3 +81,17 @@ If you want beta access to the expert audit service, contact: **beta@codeaudit.d
 - Privacy policy: `docs/privacy-policy.md`
 - Retention policy: `docs/retention-policy.md`
 - Self-service deletion endpoint: `POST /api/privacy/delete-my-data` with body `{ "confirmation": "DELETE" }` (authenticated).
+
+## Scan reliability safeguards
+
+- Queue-based scanning: scan requests are queued and processed asynchronously so API requests return quickly.
+- Repository limits: deep scans are bounded by file count and total repository size to prevent timeouts/rate-limit exhaustion on large repos.
+- SHA-based tree caching: file tree metadata is cached per commit SHA and reused on repeat scans of the same revision.
+
+
+## Code formatting and linting
+
+- Prettier and ESLint are enforced in CI (`format:check` + `lint`).
+- A Git pre-commit hook under `.githooks/pre-commit` auto-formats/lints staged files and re-adds them to the commit.
+- Install hooks locally with `npm run hooks:install` (also runs automatically on `npm install` via `prepare`).
+
