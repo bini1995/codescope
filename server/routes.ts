@@ -420,14 +420,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const stripe = await getUncachableStripeClient();
       const session = await stripe.checkout.sessions.retrieve(audit.stripeSessionId);
 
-      if (session.payment_status === "paid") {
-        await storage.updateAudit(
-          audit.id,
-          {
-            paidAt: new Date(),
-          },
-          req.auth!.sub
-        );
+      if (session.payment_status === "paid" && session.id) {
+        await storage.markAuditPaidIfUnpaid(audit.id, session.id, req.auth!.sub);
         return res.json({ paid: true });
       }
 

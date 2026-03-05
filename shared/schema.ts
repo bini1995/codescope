@@ -31,6 +31,18 @@ export const audits = pgTable("audits", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+
+export const stripeWebhookEvents = pgTable("stripe_webhook_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: text("event_id").notNull().unique(),
+  eventType: text("event_type").notNull(),
+  auditId: varchar("audit_id"),
+  stripeSessionId: text("stripe_session_id"),
+  status: text("status").notNull().default("processed"),
+  processedAt: timestamp("processed_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: text("email").notNull().unique(),

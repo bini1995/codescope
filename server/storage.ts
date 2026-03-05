@@ -1,9 +1,10 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull, or } from "drizzle-orm";
 import { db } from "./db";
 import {
   audits,
   findings,
   users,
+  stripeWebhookEvents,
   type Audit,
   type InsertAudit,
   type Finding,
@@ -26,6 +27,20 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserById(id: string): Promise<User | undefined>;
+  markAuditPaidIfUnpaid(auditId: string, stripeSessionId: string, userId?: string): Promise<boolean>;
+  recordStripeWebhookEvent(event: {
+    eventId: string;
+    eventType: string;
+    auditId?: string;
+    stripeSessionId?: string;
+    status?: string;
+  }): Promise<boolean>;
+  processPaidCheckoutWebhookEvent(event: {
+    eventId: string;
+    eventType: string;
+    auditId: string;
+    stripeSessionId: string;
+  }): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -106,6 +121,89 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
+
+  async markAuditPaidIfUnpaid(auditId: string, stripeSessionId: string, userId?: string): Promise<boolean> {
+    return db.transaction(async (tx) => {
+      const conditions = [eq(audits.id, auditId), isNull(audits.paidAt), or(isNull(audits.stripeSessionId), eq(audits.stripeSessionId, stripeSessionId))];
+      if (userId) {
+        conditions.push(eq(audits.userId, userId));
+      }
+
+      const [updated] = await tx
+        .update(audits)
+        .set({
+          paidAt: new Date(),
+          stripeSessionId,
+        })
+        .where(and(...conditions))
+        .returning({ id: audits.id });
+
+      return !!updated;
+    });
+  }
+
+  async recordStripeWebhookEvent(event: {
+    eventId: string;
+    eventType: string;
+    auditId?: string;
+    stripeSessionId?: string;
+    status?: string;
+  }): Promise<boolean> {
+    const inserted = await db
+      .insert(stripeWebhookEvents)
+      .values({
+        eventId: event.eventId,
+        eventType: event.eventType,
+        auditId: event.auditId,
+        stripeSessionId: event.stripeSessionId,
+        status: event.status ?? "processed",
+      })
+      .onConflictDoNothing({ target: stripeWebhookEvents.eventId })
+      .returning({ id: stripeWebhookEvents.id });
+
+    return inserted.length > 0;
+  }
+  async processPaidCheckoutWebhookEvent(event: {
+    eventId: string;
+    eventType: string;
+    auditId: string;
+    stripeSessionId: string;
+  }): Promise<boolean> {
+    return db.transaction(async (tx) => {
+      const inserted = await tx
+        .insert(stripeWebhookEvents)
+        .values({
+          eventId: event.eventId,
+          eventType: event.eventType,
+          auditId: event.auditId,
+          stripeSessionId: event.stripeSessionId,
+          status: "processed",
+        })
+        .onConflictDoNothing({ target: stripeWebhookEvents.eventId })
+        .returning({ id: stripeWebhookEvents.id });
+
+      if (!inserted.length) {
+        return false;
+      }
+
+      await tx
+        .update(audits)
+        .set({
+          paidAt: new Date(),
+          stripeSessionId: event.stripeSessionId,
+        })
+        .where(
+          and(
+            eq(audits.id, event.auditId),
+            isNull(audits.paidAt),
+            or(isNull(audits.stripeSessionId), eq(audits.stripeSessionId, event.stripeSessionId))
+          )
+        );
+
+      return true;
+    });
+  }
+
 }
 
 export const storage = new DatabaseStorage();
