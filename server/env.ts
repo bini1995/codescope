@@ -31,9 +31,6 @@ export function validateEnv(rawEnv: NodeJS.ProcessEnv = process.env): AppEnv {
     if (!parsed.SESSION_SECRET && !parsed.AUTH_SECRET) {
       throw new Error("SESSION_SECRET (or AUTH_SECRET) is required in production");
     }
-    if (!parsed.STRIPE_WEBHOOK_SECRET) {
-      throw new Error("STRIPE_WEBHOOK_SECRET is required in production");
-    }
   }
 
   return parsed;
