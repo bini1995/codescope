@@ -220,6 +220,11 @@ export default function Landing() {
       )}
       <section className="pt-8 pb-20 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 mb-4">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="text-xs text-emerald-300">48h SLA: Your first actionable audit report in 2 business days.</span>
+          </div>
+
           <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/50 px-3 py-1 mb-6">
             <AlertTriangle className="w-3.5 h-3.5 text-yellow-500" />
             <span className="text-xs text-muted-foreground">Built with AI? Vibe-coded? Your code has hidden risks.</span>

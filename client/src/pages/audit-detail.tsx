@@ -37,6 +37,7 @@ import {
   RefreshCw,
   CreditCard,
   Unlock,
+  FileDown,
 } from "lucide-react";
 import type { Audit, Finding, RepoMeta, FileTreeItem, ScanLogEntry } from "@shared/schema";
 import { useState, useEffect } from "react";
@@ -56,6 +57,20 @@ export default function AuditDetail() {
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
   const [showFileTree, setShowFileTree] = useState(false);
   const [showScanLog, setShowScanLog] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  const handleGeneratePdf = async () => {
+    setIsGeneratingPdf(true);
+    try {
+      window.print();
+      toast({
+        title: "Print dialog opened",
+        description: "Choose \"Save as PDF\" in your browser to export this report.",
+      });
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
 
   const { data: audit, isLoading: auditLoading, error: auditError } = useQuery<AuditWithPaid>({
     queryKey: ["/api/audits", auditId],
@@ -267,7 +282,26 @@ export default function AuditDetail() {
         </div>
       </nav>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-6 print:px-0" id="audit-report-content">
+        {isComplete && (
+          <div className="rounded-md border border-border/40 bg-card/30 p-4 flex items-center justify-between gap-3 print:hidden" data-testid="section-report-actions">
+            <div>
+              <h2 className="font-semibold text-sm">Audit Report</h2>
+              <p className="text-xs text-muted-foreground">Download this report as a PDF for stakeholders.</p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleGeneratePdf}
+              disabled={isGeneratingPdf}
+              data-testid="button-generate-pdf"
+            >
+              <FileDown className="w-3.5 h-3.5 mr-1.5" />
+              {isGeneratingPdf ? "Preparing..." : "Generate PDF"}
+            </Button>
+          </div>
+        )}
+
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-3 flex-wrap">
@@ -333,7 +367,10 @@ export default function AuditDetail() {
 
           {isComplete && audit.securityScore != null && (
             <div className="flex-shrink-0 flex items-center justify-center">
-              <ScoreRadar audit={audit} size={200} />
+              <div className="text-center">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Vibe-Code Score</p>
+                <ScoreRadar audit={audit} size={200} />
+              </div>
             </div>
           )}
         </div>
