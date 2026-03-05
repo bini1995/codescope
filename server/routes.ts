@@ -16,6 +16,7 @@ import {
   optionalAuth,
   requireAuth,
   verifyPassword,
+  validateOauthState,
 } from "./middleware/auth";
 
 const updateAuditSchema = insertAuditSchema.partial().extend({
@@ -66,10 +67,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const user = await storage.createUser({
       fullName: parsed.data.fullName,
       email: parsed.data.email,
-      passwordHash: hashPassword(parsed.data.password),
+      passwordHash: await hashPassword(parsed.data.password),
     });
 
-    createAuthSession(res, { id: user.id, email: user.email });
+    await createAuthSession(req, { id: user.id, email: user.email });
     res.status(201).json({ user: { id: user.id, email: user.email, fullName: user.fullName } });
   });
 
@@ -78,16 +79,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
 
     const user = await storage.getUserByEmail(parsed.data.email);
-    if (!user || !verifyPassword(parsed.data.password, user.passwordHash)) {
+    if (!user || !(await verifyPassword(parsed.data.password, user.passwordHash))) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    createAuthSession(res, { id: user.id, email: user.email });
+    await createAuthSession(req, { id: user.id, email: user.email });
     res.json({ user: { id: user.id, email: user.email, fullName: user.fullName } });
   });
 
-  app.post("/api/auth/logout", (_req, res) => {
-    clearAuthSession(res);
+  app.post("/api/auth/logout", async (req, res) => {
+    await clearAuthSession(req, res);
     res.status(204).send();
   });
 
@@ -95,6 +96,17 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const user = await storage.getUserById(req.auth!.sub);
     if (!user) return res.status(401).json({ message: "User not found" });
     res.json({ id: user.id, email: user.email, fullName: user.fullName });
+  });
+
+  app.post("/api/privacy/delete-my-data", requireAuth, async (req, res) => {
+    const confirmation = typeof req.body?.confirmation === "string" ? req.body.confirmation : "";
+    if (confirmation !== "DELETE") {
+      return res.status(400).json({ message: 'Confirmation must be "DELETE"' });
+    }
+
+    await storage.deleteUserData(req.auth!.sub);
+    await clearAuthSession(req, res);
+    return res.status(204).send();
   });
 
   app.get("/api/auth/github", (req, res) => {
@@ -105,13 +117,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const baseUrl = `${req.protocol}://${req.get("host")}`;
     const callbackUrl = process.env.GITHUB_CALLBACK_URL || `${baseUrl}/api/auth/github/callback`;
     const state = Math.random().toString(36).slice(2);
-    res.cookie("github_oauth_state", state, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 10 * 60 * 1000,
-      path: "/",
-    });
+    req.session.githubOauthState = state;
     const authorizeUrl = new URL("https://github.com/login/oauth/authorize");
     authorizeUrl.searchParams.set("client_id", clientId);
     authorizeUrl.searchParams.set("redirect_uri", callbackUrl);
@@ -129,13 +135,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
     const code = req.query.code;
     const state = req.query.state;
-    const cookieState = req.headers.cookie
-      ?.split(";")
-      .map((part) => part.trim())
-      .find((part) => part.startsWith("github_oauth_state="))
-      ?.split("=")[1];
 
-    if (!code || typeof code !== "string" || !state || state !== cookieState) {
+    if (!code || typeof code !== "string" || typeof state !== "string" || !validateOauthState(req, state)) {
       return res.status(400).json({ message: "Invalid OAuth callback state" });
     }
 
@@ -188,16 +189,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         user = await storage.createUser({
           email,
           fullName: userData.name || userData.login || "GitHub User",
-          passwordHash: hashPassword(`${userData.id}:${Date.now()}:${Math.random()}`),
+          passwordHash: await hashPassword(`${userData.id}:${Date.now()}:${Math.random()}`),
         });
       }
 
-      createAuthSession(res, { id: user.id, email: user.email });
-      res.clearCookie("github_oauth_state", { path: "/" });
+      await createAuthSession(req, { id: user.id, email: user.email });
+      delete req.session.githubOauthState;
       const redirectTarget = process.env.FRONTEND_URL || "/";
       return res.redirect(redirectTarget);
-    } catch (err: any) {
-      return res.status(500).json({ message: err.message || "GitHub OAuth failed" });
+    } catch {
+      return res.status(500).json({ message: "GitHub OAuth failed" });
     }
   });
 

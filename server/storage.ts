@@ -12,6 +12,7 @@ import {
   type InsertUser,
   type User,
 } from "@shared/schema";
+import { decryptSensitiveJson, decryptSensitiveText, encryptSensitiveJson, encryptSensitiveText } from "./security";
 
 export interface IStorage {
   getAudits(userId?: string): Promise<Audit[]>;
@@ -27,6 +28,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserById(id: string): Promise<User | undefined>;
+  deleteUserData(userId: string): Promise<void>;
   markAuditPaidIfUnpaid(auditId: string, stripeSessionId: string, userId?: string): Promise<boolean>;
   recordStripeWebhookEvent(event: {
     eventId: string;
@@ -43,36 +45,68 @@ export interface IStorage {
   }): Promise<boolean>;
 }
 
+function decryptAuditRecord(audit: Audit): Audit {
+  return {
+    ...audit,
+    contactEmail: decryptSensitiveText(audit.contactEmail) || audit.contactEmail,
+    fileTree: decryptSensitiveJson(audit.fileTree),
+    scanLog: decryptSensitiveJson(audit.scanLog),
+  };
+}
+
+function encryptAuditInsert(audit: InsertAudit & { userId?: string }): InsertAudit & { userId?: string } {
+  return {
+    ...audit,
+    contactEmail: encryptSensitiveText(audit.contactEmail) || audit.contactEmail,
+  };
+}
+
+function encryptAuditUpdate(data: Partial<Audit>): Partial<Audit> {
+  const encrypted: Partial<Audit> = { ...data };
+
+  if (Object.prototype.hasOwnProperty.call(data, "contactEmail")) {
+    encrypted.contactEmail = encryptSensitiveText(data.contactEmail) as string;
+  }
+  if (Object.prototype.hasOwnProperty.call(data, "fileTree")) {
+    encrypted.fileTree = encryptSensitiveJson(data.fileTree) as Audit["fileTree"];
+  }
+  if (Object.prototype.hasOwnProperty.call(data, "scanLog")) {
+    encrypted.scanLog = encryptSensitiveJson(data.scanLog) as Audit["scanLog"];
+  }
+
+  return encrypted;
+}
+
 export class DatabaseStorage implements IStorage {
   async getAudits(userId?: string): Promise<Audit[]> {
-    if (!userId) {
-      return db.select().from(audits).orderBy(audits.createdAt);
-    }
+    const rows = userId
+      ? await db.select().from(audits).where(eq(audits.userId, userId)).orderBy(audits.createdAt)
+      : await db.select().from(audits).orderBy(audits.createdAt);
 
-    return db.select().from(audits).where(eq(audits.userId, userId)).orderBy(audits.createdAt);
+    return rows.map(decryptAuditRecord);
   }
 
   async getAudit(id: string, userId?: string): Promise<Audit | undefined> {
     const [audit] = userId
       ? await db.select().from(audits).where(and(eq(audits.id, id), eq(audits.userId, userId)))
       : await db.select().from(audits).where(eq(audits.id, id));
-    return audit;
+    return audit ? decryptAuditRecord(audit) : undefined;
   }
 
   async createAudit(audit: InsertAudit & { userId?: string }): Promise<Audit> {
-    const [created] = await db.insert(audits).values(audit).returning();
-    return created;
+    const [created] = await db.insert(audits).values(encryptAuditInsert(audit)).returning();
+    return decryptAuditRecord(created);
   }
 
   async updateAudit(id: string, data: Partial<Audit>, userId?: string): Promise<Audit | undefined> {
     const [updated] = userId
       ? await db
           .update(audits)
-          .set(data)
+          .set(encryptAuditUpdate(data))
           .where(and(eq(audits.id, id), eq(audits.userId, userId)))
           .returning()
-      : await db.update(audits).set(data).where(eq(audits.id, id)).returning();
-    return updated;
+      : await db.update(audits).set(encryptAuditUpdate(data)).where(eq(audits.id, id)).returning();
+    return updated ? decryptAuditRecord(updated) : undefined;
   }
 
   async deleteAudit(id: string, userId?: string): Promise<void> {
@@ -122,6 +156,17 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async deleteUserData(userId: string): Promise<void> {
+    const userAudits = await db.select({ id: audits.id }).from(audits).where(eq(audits.userId, userId));
+
+    for (const audit of userAudits) {
+      await db.delete(findings).where(eq(findings.auditId, audit.id));
+    }
+
+    await db.delete(audits).where(eq(audits.userId, userId));
+    await db.delete(users).where(eq(users.id, userId));
+  }
+
   async markAuditPaidIfUnpaid(auditId: string, stripeSessionId: string, userId?: string): Promise<boolean> {
     return db.transaction(async (tx) => {
       const conditions = [eq(audits.id, auditId), isNull(audits.paidAt), or(isNull(audits.stripeSessionId), eq(audits.stripeSessionId, stripeSessionId))];
@@ -163,6 +208,7 @@ export class DatabaseStorage implements IStorage {
 
     return inserted.length > 0;
   }
+
   async processPaidCheckoutWebhookEvent(event: {
     eventId: string;
     eventType: string;
@@ -203,7 +249,6 @@ export class DatabaseStorage implements IStorage {
       return true;
     });
   }
-
 }
 
 export const storage = new DatabaseStorage();
