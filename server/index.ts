@@ -9,6 +9,17 @@ import { WebhookHandlers } from "./webhookHandlers";
 const app = express();
 const httpServer = createServer(app);
 
+const isProduction = process.env.NODE_ENV === "production";
+const trustProxy = process.env.TRUST_PROXY;
+app.set(
+  "trust proxy",
+  typeof trustProxy === "string"
+    ? trustProxy === "true" || trustProxy === "1"
+      ? 1
+      : trustProxy
+    : isProduction
+);
+
 declare module "http" {
   interface IncomingMessage {
     rawBody: unknown;
@@ -82,19 +93,63 @@ app.use(
 
 app.use(express.urlencoded({ extended: false }));
 
+app.use((_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  res.setHeader("X-DNS-Prefetch-Control", "off");
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+  res.setHeader("Cross-Origin-Resource-Policy", "same-site");
+  res.setHeader(
+    "Permissions-Policy",
+    "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
+  );
+  if (isProduction) {
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+  }
 
-const allowedOrigins = (process.env.FRONTEND_URL || "")
+  next();
+});
+
+const devOrigins = [
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:5173",
+];
+
+const replitDomains = (process.env.REPLIT_DOMAINS || "")
   .split(",")
+  .map((domain) => domain.trim())
+  .filter(Boolean)
+  .map((domain) => `https://${domain}`);
+
+const railwayDomain = process.env.RAILWAY_PUBLIC_DOMAIN
+  ? [`https://${process.env.RAILWAY_PUBLIC_DOMAIN.trim()}`]
+  : [];
+
+const allowedOrigins = [
+  ...(process.env.FRONTEND_URL || "").split(","),
+  ...(process.env.CORS_ALLOWED_ORIGINS || "").split(","),
+  ...replitDomains,
+  ...railwayDomain,
+  ...devOrigins,
+]
   .map((origin) => origin.trim())
   .filter(Boolean);
 
+const allowedOriginSet = new Set(allowedOrigins);
+
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  if (origin && allowedOrigins.includes(origin)) {
+  if (origin && allowedOriginSet.has(origin)) {
+    res.header("Vary", "Origin");
     res.header("Access-Control-Allow-Origin", origin);
     res.header("Access-Control-Allow-Credentials", "true");
     res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
     res.header("Access-Control-Allow-Methods", "GET,POST,PATCH,PUT,DELETE,OPTIONS");
+  } else if (origin) {
+    return res.status(403).json({ message: "Origin not allowed" });
   }
 
   if (req.method === "OPTIONS") {
@@ -102,6 +157,30 @@ app.use((req, res, next) => {
   }
 
   next();
+});
+
+const RATE_LIMIT_WINDOW_MS = parseInt(process.env.RATE_LIMIT_WINDOW_MS || "60000", 10);
+const RATE_LIMIT_MAX_REQUESTS = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "120", 10);
+const ipRequestCounts = new Map<string, { count: number; expiresAt: number }>();
+
+app.use("/api", (req, res, next) => {
+  const key = req.ip || req.socket.remoteAddress || "unknown";
+  const now = Date.now();
+  const current = ipRequestCounts.get(key);
+
+  if (!current || current.expiresAt <= now) {
+    ipRequestCounts.set(key, { count: 1, expiresAt: now + RATE_LIMIT_WINDOW_MS });
+    return next();
+  }
+
+  current.count += 1;
+  if (current.count > RATE_LIMIT_MAX_REQUESTS) {
+    const retryAfterSeconds = Math.max(1, Math.ceil((current.expiresAt - now) / 1000));
+    res.setHeader("Retry-After", retryAfterSeconds.toString());
+    return res.status(429).json({ message: "Too many requests, please try again later." });
+  }
+
+  return next();
 });
 
 export function log(message: string, source = "express") {
