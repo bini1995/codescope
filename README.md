@@ -1,11 +1,11 @@
 # CodeAudit
 
-Professional codebase audit platform for fast-moving SaaS teams that want expert-level security and reliability insights.
+Decision engine for fast-moving SaaS teams that need to know what technical risks matter first.
 
 ## Current Status
 - **Beta**: actively evolving with a manual audit-first workflow.
-- **Positioning**: high-ticket expert service for founders and startup teams that need confidence before scaling.
-- **Delivery model (current)**: expert-led code audit with prioritized report and remediation guidance.
+- **Positioning**: decision-ready technical risk partner for founders and startup teams making launch and growth bets.
+- **Delivery model (current)**: expert-led risk analysis that produces a launch blocker map, remediation sprint plan, and stakeholder-ready memo.
 
 ## Pricing Model
 Productized for fast purchase decisions and rapid time-to-value:
@@ -13,11 +13,11 @@ Productized for fast purchase decisions and rapid time-to-value:
 1. **Quick Triage — $499**
    - 45–60 minute session, top 10 risks, short walkthrough call.
 2. **Full Audit — $1,500**
-   - Detailed report + remediation roadmap with expert context.
+   - Launch blocker map + remediation roadmap with expert context.
 3. **Fix Sprint — $3,000**
    - Implementation of top fixes with production-ready pull requests.
 
-Each engagement starts with an instant scan preview (repo metadata, file tree, 10 heuristic checks, and sample findings), then upgrades into expert review and optional implementation support.
+Each engagement starts with an instant risk preview (repo metadata, file tree, 10 heuristic checks, and sample findings), then upgrades into expert decision support and optional implementation.
 
 ## Tech Stack
 - **Frontend**: React, TypeScript, Vite, Tailwind CSS, shadcn/ui
@@ -67,9 +67,12 @@ npm run dev
 The app runs with Express + Vite together in development mode.
 
 ## Project Highlights
-- Security, stability, maintainability, scalability, and CI/CD-focused audit findings.
-- Severity-ranked issues with business impact framing.
-- Premium report workflow with remediation roadmap.
+- Security, stability, maintainability, scalability, and CI/CD risk intelligence.
+- Severity-ranked findings translated into launch risk, revenue risk, and operational risk.
+- Decision outputs: launch blocker map, remediation sprint plan, investor/buyer-ready technical risk memo, and engineering maturity scorecard.
+- Dual-mode experience:
+  - **Founder mode** answers: can we safely launch, what threatens trust, and what minimum fixes are required before customer onboarding.
+  - **Engineering mode** provides: exact files, severity, reproducibility, fix steps, acceptance criteria, likely owner, and estimated effort.
 
 ## Beta Access / Contact
 If you want beta access to the expert audit service, contact: **beta@codeaudit.dev**.
