@@ -164,9 +164,9 @@ export default function Landing() {
     },
     {
       icon: <Scan className="w-5 h-5" />,
-      title: "Automated Pattern Detection",
-      desc: "Pattern-based detection across 80+ files with line-level evidence and severity ranking",
-      impact: "Find issues humans miss",
+      title: "Decision-Ready Prioritization",
+      desc: "We rank technical findings by launch risk, revenue risk, and operational impact so you know what to fix now",
+      impact: "Turn findings into clear next actions",
     },
   ];
 
@@ -194,8 +194,8 @@ export default function Landing() {
       desc: "45–60 minute expert triage with top risks and immediate actions",
       features: [
         "45–60 minute expert review session",
-        "Top 10 launch-blocking risks identified",
-        "Short walkthrough call + prioritized actions",
+        "Top 10 launch blockers mapped by business impact",
+        "Short walkthrough call + what-to-do-first plan",
         "Fast summary delivered within 24 hours",
         "Best for founders needing fast decision support",
       ],
@@ -208,10 +208,10 @@ export default function Landing() {
       desc: "Comprehensive report and remediation roadmap for launch confidence",
       features: [
         "Human-led codebase security + architecture review",
-        "Executive summary + business impact analysis",
+        "Launch blocker map + business impact analysis",
         "Detailed finding evidence and fix recommendations",
         "14-day prioritized remediation roadmap",
-        "Manual intake and follow-up support",
+        "Buyer/investor-ready technical risk memo",
       ],
       cta: "Book $1,500 Audit",
       popular: true,
@@ -222,9 +222,9 @@ export default function Landing() {
       desc: "Hands-on implementation sprint where we ship PRs for your top issues",
       features: [
         "Everything in Full Audit",
-        "Implementation of the highest-priority fixes",
+        "Implementation of highest-priority fixes",
         "Production-ready pull requests with rationale",
-        "Before/after risk summary for stakeholders",
+        "Before/after engineering maturity scorecard",
         "Ideal when your team needs execution, not just advice",
       ],
       cta: "Start $3,000 Sprint",
@@ -271,7 +271,7 @@ export default function Landing() {
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 mb-4">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="text-xs text-emerald-300">48h SLA: Your first actionable audit report in 2 business days.</span>
+            <span className="text-xs text-emerald-300">48h SLA: Your first decision-ready risk plan in 2 business days.</span>
           </div>
 
           <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/50 px-3 py-1 mb-6">
@@ -280,20 +280,20 @@ export default function Landing() {
           </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] mb-6" data-testid="text-hero-title">
-            Audit your codebase for
+            Get clarity on
             <br />
             <span className="bg-gradient-to-r from-primary via-blue-400 to-cyan-400 bg-clip-text text-transparent">
-              security, stability & growth risks
+              what matters first
             </span>
           </h1>
 
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-6 leading-relaxed" data-testid="text-hero-subtitle">
-            Productized expert audits for AI-built SaaS teams.
-            Get fast signal with an instant preview, then expert context and implementation support.
+            A decision engine for AI-built SaaS teams.
+            Translate code risk into launch risk, revenue risk, and operational risk.
           </p>
 
           <p className="text-sm text-muted-foreground/70 mb-8">
-            Stop guesswork. Know where your code breaks before your users do.
+            Don’t buy a list of issues. Buy clarity on what to do next.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-12">
@@ -332,9 +332,9 @@ export default function Landing() {
       <section className="pb-20 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl font-bold mb-3" data-testid="text-value-title">What CodeAudit Finds For You</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-3" data-testid="text-value-title">What CodeAudit Decides For You</h2>
             <p className="text-muted-foreground text-sm max-w-lg mx-auto">
-              We find real risks in your code. Actionable recommendations, not noise.
+              We convert technical signal into business-priority action plans, not scanner noise.
             </p>
           </div>
 
@@ -364,26 +364,26 @@ export default function Landing() {
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-10">
             <h2 className="text-2xl sm:text-3xl font-bold mb-3" data-testid="text-how-title">How It Works</h2>
-            <p className="text-muted-foreground text-sm">Simple process, powerful results</p>
+            <p className="text-muted-foreground text-sm">From findings to clear action in 3 steps</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
                 step: "1",
                 title: "Run Instant Scan Preview",
-                desc: "Immediately get repo metadata, file tree visibility, 10 heuristic checks, and sample findings.",
+                desc: "Immediately get repo metadata, file tree visibility, 10 heuristic checks, and initial risk signal.",
                 icon: <GitFork className="w-5 h-5" />,
               },
               {
                 step: "2",
-                title: "Add Expert Review",
-                desc: "Upgrade to expert analysis for architecture context, infra risks, and business-priority remediation sequencing.",
+                title: "Map Business Impact",
+                desc: "We translate findings into launch blockers, revenue risks, and operational risk with clear severity.",
                 icon: <Scan className="w-5 h-5" />,
               },
               {
                 step: "3",
-                title: "Ship Fixes Fast",
-                desc: "Pick a fix sprint when needed and receive implementation-focused PRs for your highest-risk issues.",
+                title: "Execute the Sprint Plan",
+                desc: "Get a prioritized remediation sprint plan and optional implementation PRs for the highest-impact fixes.",
                 icon: <FileText className="w-5 h-5" />,
               },
             ].map((item, i) => (
@@ -407,7 +407,7 @@ export default function Landing() {
               <ArrowRight className="w-4 h-4" />
               <span className="px-3 py-1 rounded border border-border/30">We Audit</span>
               <ArrowRight className="w-4 h-4" />
-              <span className="px-3 py-1 rounded border border-border/30">Get Report & Remediation</span>
+              <span className="px-3 py-1 rounded border border-border/30">Get Decision Plan</span>
             </div>
           </div>
         </div>
@@ -453,16 +453,16 @@ export default function Landing() {
       <section className="pb-16 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto">
           <div className="rounded-md border border-border/40 bg-card/20 p-6">
-            <h3 className="text-lg font-semibold mb-2" data-testid="text-preview-title">Instant Scan Preview (included before expert upsell)</h3>
+            <h3 className="text-lg font-semibold mb-2" data-testid="text-preview-title">Instant Risk Preview (included before expert upgrade)</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Every engagement starts with quick, tangible value so buyers can see risk signal before committing to deeper work.
+              Every engagement starts with fast signal, then evolves into decision-grade outputs your team can execute.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
               {[
                 "Repository metadata snapshot",
                 "File tree + hot spots overview",
                 "10 heuristic checks across common failure modes",
-                "Sample findings to frame next best action",
+                "Sample findings mapped to next best decision",
               ].map((item, idx) => (
                 <div key={idx} className="rounded border border-border/40 bg-background/50 p-3" data-testid={`preview-item-${idx}`}>
                   <div className="flex items-start gap-2">
@@ -479,9 +479,9 @@ export default function Landing() {
       <section id="pricing" className="pb-20 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl font-bold mb-3" data-testid="text-pricing-title">Choose Your Audit Path</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-3" data-testid="text-pricing-title">Choose Your Decision Path</h2>
             <p className="text-muted-foreground text-sm max-w-md mx-auto">
-              Productized offers designed for fast decisions and immediate risk reduction.
+              Productized offers designed to turn technical risk into an executable plan.
             </p>
           </div>
 
@@ -535,8 +535,8 @@ export default function Landing() {
         <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-4" data-testid="sample-report-callout">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h3 className="font-semibold text-sm">See a sample report instantly</h3>
-              <p className="text-xs text-muted-foreground mt-1">Preview an executive summary, top risks, and a prioritized fix roadmap before connecting your repo.</p>
+              <h3 className="font-semibold text-sm">See a sample decision memo instantly</h3>
+              <p className="text-xs text-muted-foreground mt-1">Preview a launch blocker map, top risks, and a prioritized remediation sprint plan before connecting your repo.</p>
             </div>
             <Button size="sm" variant="outline" onClick={() => setShowSampleReport((prev) => !prev)} data-testid="button-view-sample-report" aria-expanded={showSampleReport}>
               {showSampleReport ? "Hide Sample" : "View Sample"}
@@ -552,11 +552,11 @@ export default function Landing() {
               <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                 <div>
                   <p className="text-xs text-muted-foreground">Live Demo Snapshot</p>
-                  <h4 className="text-base sm:text-lg font-semibold">SaaS Security + Stability Audit</h4>
+                  <h4 className="text-base sm:text-lg font-semibold">SaaS Launch Risk Decision Brief</h4>
                 </div>
                 <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs text-primary">
                   <Sparkles className="w-3.5 h-3.5" />
-                  Executive-ready output
+                  Decision-ready output
                 </div>
               </div>
 
@@ -588,7 +588,7 @@ export default function Landing() {
                     </ul>
                   </div>
                   <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs">
-                    <p className="font-semibold mb-1">Fast remediation plan</p>
+                    <p className="font-semibold mb-1">Remediation sprint plan</p>
                     <p className="text-muted-foreground">Day 1 patch auth + rate limits. Day 2 add CI policy gates. Day 3 verify with regression + security smoke checks.</p>
                   </div>
                 </div>
@@ -601,15 +601,30 @@ export default function Landing() {
 
       <section className="pb-14 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto">
-          <h3 className="text-lg font-semibold text-center mb-4" data-testid="text-offer-modes">Urgent audit modes</h3>
+          <h3 className="text-lg font-semibold text-center mb-2" data-testid="text-offer-modes">Dual-mode output for founders and engineers</h3>
+          <p className="text-center text-xs text-muted-foreground mb-5">
+            Sell clarity to the founder, and execution detail to the engineering team.
+          </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="rounded-md border border-border/40 bg-card/20 p-4" data-testid="card-prelaunch-audit">
-              <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Pre-launch Audit</p>
-              <p className="text-sm text-foreground/90">For teams shipping soon that need confidence on security, stability, and deployment readiness before release.</p>
+              <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Founder Mode</p>
+              <p className="text-sm text-foreground/90 mb-3">Business-first decisions for non-expert startup buyers.</p>
+              <ul className="space-y-1.5 text-xs text-muted-foreground">
+                <li>• Can we safely launch now?</li>
+                <li>• What could break customer trust?</li>
+                <li>• What would scare investors, acquirers, or enterprise buyers?</li>
+                <li>• What is the minimum fix set before onboarding real customers?</li>
+              </ul>
             </div>
             <div className="rounded-md border border-border/40 bg-card/20 p-4" data-testid="card-postincident-audit">
-              <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Post-incident Audit</p>
-              <p className="text-sm text-foreground/90">For teams recovering from outages or security events that need root-cause hardening and remediation priorities.</p>
+              <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Engineering Mode</p>
+              <p className="text-sm text-foreground/90 mb-3">Delivery-ready implementation detail for technical teams.</p>
+              <ul className="space-y-1.5 text-xs text-muted-foreground">
+                <li>• Exact files and reproducible evidence</li>
+                <li>• Severity, fix steps, and acceptance criteria</li>
+                <li>• Likely owner and estimated effort</li>
+                <li>• Prioritized sequencing for remediation sprints</li>
+              </ul>
             </div>
           </div>
         </div>
@@ -618,8 +633,8 @@ export default function Landing() {
       <section id="intake-form" className="pb-24 px-4 sm:px-6">
         <div className="max-w-xl mx-auto">
           <div className="text-center mb-8">
-            <h2 className="text-2xl sm:text-3xl font-bold mb-2" data-testid="text-form-title">Start Your Audit</h2>
-            <p className="text-sm text-muted-foreground">Submit your repo. Get your report. Fix what matters first.</p>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-2" data-testid="text-form-title">Start Your Decision Plan</h2>
+            <p className="text-sm text-muted-foreground">Submit your repo. Get launch-risk clarity. Fix what matters first.</p>
           </div>
 
           <form
@@ -808,7 +823,7 @@ export default function Landing() {
               ) : (
                 <>
                   <Scan className="w-4 h-4 mr-1.5" />
-                  Start Your Audit
+                  Start Your Decision Plan
                 </>
               )}
             </Button>
@@ -825,7 +840,7 @@ export default function Landing() {
             </div>
             <span className="text-sm font-medium" data-testid="text-footer-logo">CodeAudit</span>
           </div>
-            <p className="text-xs text-muted-foreground max-w-xs">Professional codebase audits for AI-built startups shipping under pressure.</p>
+            <p className="text-xs text-muted-foreground max-w-xs">Decision-ready technical risk intelligence for AI-built startups shipping under pressure.</p>
             <div className="flex items-center gap-2 mt-4 text-muted-foreground">
               <Twitter className="w-4 h-4" />
               <Linkedin className="w-4 h-4" />
@@ -836,8 +851,8 @@ export default function Landing() {
             <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3">Product</p>
             <ul className="space-y-2 text-sm">
               <li><a href="#pricing" className="hover:text-primary transition-colors">Pricing</a></li>
-              <li><a href="#intake-form" className="hover:text-primary transition-colors">Get Audit</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Sample Report</a></li>
+              <li><a href="#intake-form" className="hover:text-primary transition-colors">Get Decision Plan</a></li>
+              <li><a href="#" className="hover:text-primary transition-colors">Sample Decision Memo</a></li>
             </ul>
           </div>
           <div>
