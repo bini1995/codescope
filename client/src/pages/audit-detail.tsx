@@ -50,7 +50,6 @@ type CategoryFilter = "all" | "security" | "stability" | "maintainability" | "sc
 
 type AuditWithPaid = Audit & { isPaid?: boolean };
 
-
 type EffortBucket = "1 hour" | "1 day" | "1 week";
 
 type FindingWithPriority = Finding & {
@@ -74,10 +73,10 @@ function getEffortBucket(effort: string): EffortBucket {
 
 function getOwnerSuggestion(finding: Finding): "Frontend" | "Backend" | "DevOps" {
   if (finding.category === "cicd" || finding.filePath?.includes(".github/")) return "DevOps";
-  if (finding.filePath?.includes("client/") || finding.filePath?.includes("frontend/")) return "Frontend";
+  if (finding.filePath?.includes("client/") || finding.filePath?.includes("frontend/"))
+    return "Frontend";
   return "Backend";
 }
-
 
 type MiniAuditStatus = "pass" | "fail" | "unknown";
 
@@ -95,6 +94,32 @@ type TicketDraft = {
   acceptanceCriteria: string[];
 };
 
+type EnterpriseProspectRejector = {
+  headline: string;
+  confidenceLabel: string;
+  manualReviewPrompt: string;
+  objections: Array<{
+    title: string;
+    reason: string;
+    severity: string;
+    sampleFindingTitles: string[];
+  }>;
+};
+
+type FounderSingleAnswer = {
+  headline: string;
+  launchRecommendation: string;
+  portfolioSummary: string;
+  lanes: Array<{
+    key: string;
+    label: string;
+    status: "strong" | "watch" | "at_risk";
+    summary: string;
+    signalCount: number;
+    sampleFindingTitles: string[];
+  }>;
+};
+
 function findSignal(findings: Finding[], terms: string[]) {
   const lowerTerms = terms.map((t) => t.toLowerCase());
   return findings.find((f) => {
@@ -105,11 +130,36 @@ function findSignal(findings: Finding[], terms: string[]) {
 
 function buildMiniAuditChecks(findings: Finding[]): MiniAuditCheck[] {
   const checks = [
-    { key: "rate-limit", title: "Rate limiting in API edge", owner: "Backend" as const, terms: ["rate limit", "throttle"] },
-    { key: "csp", title: "Content-Security-Policy headers", owner: "Frontend" as const, terms: ["content-security-policy", "csp"] },
-    { key: "session", title: "Secure session cookie flags", owner: "Backend" as const, terms: ["session cookie", "secure cookie", "httponly", "samesite"] },
-    { key: "secret-scan", title: "Secret scanning in CI/CD", owner: "DevOps" as const, terms: ["secret scanning", "gitleaks", "secret", "github actions"] },
-    { key: "backups", title: "Backups + restore runbook", owner: "DevOps" as const, terms: ["backup", "restore", "rpo", "rto"] },
+    {
+      key: "rate-limit",
+      title: "Rate limiting in API edge",
+      owner: "Backend" as const,
+      terms: ["rate limit", "throttle"],
+    },
+    {
+      key: "csp",
+      title: "Content-Security-Policy headers",
+      owner: "Frontend" as const,
+      terms: ["content-security-policy", "csp"],
+    },
+    {
+      key: "session",
+      title: "Secure session cookie flags",
+      owner: "Backend" as const,
+      terms: ["session cookie", "secure cookie", "httponly", "samesite"],
+    },
+    {
+      key: "secret-scan",
+      title: "Secret scanning in CI/CD",
+      owner: "DevOps" as const,
+      terms: ["secret scanning", "gitleaks", "secret", "github actions"],
+    },
+    {
+      key: "backups",
+      title: "Backups + restore runbook",
+      owner: "DevOps" as const,
+      terms: ["backup", "restore", "rpo", "rto"],
+    },
   ];
 
   return checks.map((check) => {
@@ -128,7 +178,7 @@ function buildMiniAuditChecks(findings: Finding[]): MiniAuditCheck[] {
       key: check.key,
       title: check.title,
       owner: check.owner,
-      status: hit.severity === "low" ? "pass" as const : "fail" as const,
+      status: hit.severity === "low" ? ("pass" as const) : ("fail" as const),
       reason:
         hit.severity === "low"
           ? `Observed low-risk signal in finding: ${hit.title}`
@@ -140,7 +190,9 @@ function buildMiniAuditChecks(findings: Finding[]): MiniAuditCheck[] {
 function launchReadinessScore(audit: AuditWithPaid) {
   const security = audit.securityScore ?? 0;
   const stability = audit.stabilityScore ?? 0;
-  const operability = Math.round(((audit.maintainabilityScore ?? 0) + (audit.scalabilityScore ?? 0) + (audit.cicdScore ?? 0)) / 3);
+  const operability = Math.round(
+    ((audit.maintainabilityScore ?? 0) + (audit.scalabilityScore ?? 0) + (audit.cicdScore ?? 0)) / 3
+  );
   const score = Math.round(security * 0.4 + stability * 0.35 + operability * 0.25);
   return { score, security, stability, operability };
 }
@@ -163,14 +215,18 @@ export default function AuditDetail() {
       window.print();
       toast({
         title: "Print dialog opened",
-        description: "Choose \"Save as PDF\" in your browser to export this report.",
+        description: 'Choose "Save as PDF" in your browser to export this report.',
       });
     } finally {
       setIsGeneratingPdf(false);
     }
   };
 
-  const { data: audit, isLoading: auditLoading, error: auditError } = useQuery<AuditWithPaid>({
+  const {
+    data: audit,
+    isLoading: auditLoading,
+    error: auditError,
+  } = useQuery<AuditWithPaid>({
     queryKey: ["/api/audits", auditId],
     enabled: !!auditId,
     refetchInterval: (query) => {
@@ -187,13 +243,26 @@ export default function AuditDetail() {
     },
   });
 
+  const { data: businessAssets } = useQuery<{
+    artifacts?: {
+      enterpriseProspectRejector?: EnterpriseProspectRejector;
+      founderSingleAnswer?: FounderSingleAnswer;
+    };
+  }>({
+    queryKey: ["/api/audits", auditId, "business-assets"],
+    enabled: !!auditId && audit?.status === "complete",
+  });
+
   useEffect(() => {
     if (searchString?.includes("payment=success") && auditId) {
       apiRequest("POST", `/api/audits/${auditId}/verify-payment`)
         .then((res) => res.json())
         .then((data) => {
           if (data.paid) {
-            toast({ title: "Payment Successful", description: "Full remediation details are now unlocked." });
+            toast({
+              title: "Payment Successful",
+              description: "Full remediation details are now unlocked.",
+            });
             queryClient.invalidateQueries({ queryKey: ["/api/audits", auditId] });
             queryClient.invalidateQueries({ queryKey: ["/api/audits", auditId, "findings"] });
             window.history.replaceState({}, "", `/audit/${auditId}`);
@@ -243,11 +312,13 @@ export default function AuditDetail() {
   });
 
   const severityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
-  const sortedFindings = filteredFindings?.slice().sort(
-    (a, b) =>
-      (severityOrder[a.severity as keyof typeof severityOrder] ?? 4) -
-      (severityOrder[b.severity as keyof typeof severityOrder] ?? 4)
-  );
+  const sortedFindings = filteredFindings
+    ?.slice()
+    .sort(
+      (a, b) =>
+        (severityOrder[a.severity as keyof typeof severityOrder] ?? 4) -
+        (severityOrder[b.severity as keyof typeof severityOrder] ?? 4)
+    );
 
   const findingCounts = {
     critical: findings?.filter((f) => f.severity === "critical").length ?? 0,
@@ -291,6 +362,9 @@ export default function AuditDetail() {
     unknown: miniAuditChecks.filter((c) => c.status === "unknown").length,
   };
 
+  const enterpriseRejector = businessAssets?.artifacts?.enterpriseProspectRejector;
+  const founderSingleAnswer = businessAssets?.artifacts?.founderSingleAnswer;
+
   const ticketDrafts: TicketDraft[] = quickestHighReduction.map((finding) => ({
     finding,
     scope: `${finding.owner} team updates ${finding.filePath ?? "affected service"} and related tests.`,
@@ -305,7 +379,9 @@ export default function AuditDetail() {
     topExistentialRisks.length > 0
       ? `If unchanged for 90 days, the highest likelihood failures are: ${topExistentialRisks
           .map((risk) => risk.title.toLowerCase())
-          .join(", ")}. This creates outsized risk for customer trust, uptime, and delivery velocity.`
+          .join(
+            ", "
+          )}. This creates outsized risk for customer trust, uptime, and delivery velocity.`
       : "No critical degradation projected in 90 days from current findings.";
 
   const downloadFile = (name: string, content: string, type = "text/plain") => {
@@ -332,16 +408,24 @@ export default function AuditDetail() {
 ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
       )
       .join("\n\n");
-    downloadFile(`${audit?.repoName || "audit-report"}-linear-backlog.md`, payload || "No prioritized issues available");
+    downloadFile(
+      `${audit?.repoName || "audit-report"}-linear-backlog.md`,
+      payload || "No prioritized issues available"
+    );
   };
 
   const handleExportJira = () => {
     const rows = ["Summary,Description,Priority,Labels,Owner,Acceptance Criteria"].concat(
-      ticketDrafts.map((ticket) =>
-        `"${ticket.finding.title}","${ticket.scope.replace(/"/g, '""')}","${ticket.finding.severity}","codescope-remediation ${ticket.finding.category}","${ticket.finding.owner}","${ticket.acceptanceCriteria.join("; ").replace(/"/g, '""')}"`
+      ticketDrafts.map(
+        (ticket) =>
+          `"${ticket.finding.title}","${ticket.scope.replace(/"/g, '""')}","${ticket.finding.severity}","codescope-remediation ${ticket.finding.category}","${ticket.finding.owner}","${ticket.acceptanceCriteria.join("; ").replace(/"/g, '""')}"`
       )
     );
-    downloadFile(`${audit?.repoName || "audit-report"}-jira-backlog.csv`, rows.join("\n"), "text/csv");
+    downloadFile(
+      `${audit?.repoName || "audit-report"}-jira-backlog.csv`,
+      rows.join("\n"),
+      "text/csv"
+    );
   };
 
   const remediationPlan = audit?.remediationPlan as Array<{
@@ -375,10 +459,14 @@ ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
             {auditError ? "Failed to Load Audit" : "Audit Not Found"}
           </h2>
           <p className="text-muted-foreground mb-4">
-            {auditError ? "There was an error loading this audit. Please try again." : "This audit doesn't exist or has been removed."}
+            {auditError
+              ? "There was an error loading this audit. Please try again."
+              : "This audit doesn't exist or has been removed."}
           </p>
           <Link href="/dashboard">
-            <Button size="sm" data-testid="button-back-dashboard">Back to Dashboard</Button>
+            <Button size="sm" data-testid="button-back-dashboard">
+              Back to Dashboard
+            </Button>
           </Link>
         </div>
       </div>
@@ -434,7 +522,10 @@ ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
               </Button>
             )}
             {isPaid && (
-              <span className="flex items-center gap-1.5 text-xs text-emerald-400 px-2 py-1 rounded bg-emerald-500/10 border border-emerald-500/20" data-testid="badge-unlocked">
+              <span
+                className="flex items-center gap-1.5 text-xs text-emerald-400 px-2 py-1 rounded bg-emerald-500/10 border border-emerald-500/20"
+                data-testid="badge-unlocked"
+              >
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 Unlocked
               </span>
@@ -458,7 +549,12 @@ ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
                 </>
               )}
             </Button>
-            <a href={audit.repoUrl} target="_blank" rel="noopener noreferrer" data-testid="link-repo-external">
+            <a
+              href={audit.repoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-testid="link-repo-external"
+            >
               <Button variant="outline" size="sm">
                 <ExternalLink className="w-3.5 h-3.5 mr-1" />
                 Repo
@@ -468,12 +564,20 @@ ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
         </div>
       </nav>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-6 print:px-0" id="audit-report-content">
+      <div
+        className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-6 print:px-0"
+        id="audit-report-content"
+      >
         {isComplete && (
-          <div className="rounded-md border border-border/40 bg-card/30 p-4 flex items-center justify-between gap-3 print:hidden" data-testid="section-report-actions">
+          <div
+            className="rounded-md border border-border/40 bg-card/30 p-4 flex items-center justify-between gap-3 print:hidden"
+            data-testid="section-report-actions"
+          >
             <div>
               <h2 className="font-semibold text-sm">Audit Report</h2>
-              <p className="text-xs text-muted-foreground">Download this report as a PDF for stakeholders.</p>
+              <p className="text-xs text-muted-foreground">
+                Download this report as a PDF for stakeholders.
+              </p>
             </div>
             <Button
               size="sm"
@@ -488,20 +592,97 @@ ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
           </div>
         )}
 
-
         {isComplete && isPaid && (
           <div className="grid gap-4 md:grid-cols-2" data-testid="section-executive-summary">
             <div className="rounded-md border border-border/40 bg-card/30 p-4">
               <h2 className="font-semibold text-sm mb-2">Executive Summary (One-Page)</h2>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                {audit.executiveSummary || `This codebase shows ${findingCounts.critical} critical and ${findingCounts.high} high-risk issues requiring immediate focus. The fastest risk reduction comes from resolving configuration and auth-adjacent findings first, then tightening CI/CD controls. The roadmap below prioritizes changes that materially reduce outage and breach probability without stalling feature delivery.`}
+                {audit.executiveSummary ||
+                  `This codebase shows ${findingCounts.critical} critical and ${findingCounts.high} high-risk issues requiring immediate focus. The fastest risk reduction comes from resolving configuration and auth-adjacent findings first, then tightening CI/CD controls. The roadmap below prioritizes changes that materially reduce outage and breach probability without stalling feature delivery.`}
               </p>
             </div>
             <div className="rounded-md border border-border/40 bg-card/30 p-4">
               <h2 className="font-semibold text-sm mb-2">What breaks in 90 days if unchanged</h2>
               <p className="text-sm text-muted-foreground leading-relaxed">{ninetyDayOutlook}</p>
             </div>
-            <div className="rounded-md border border-border/40 bg-card/30 p-4 md:col-span-2" data-testid="section-launch-readiness-score">
+            {founderSingleAnswer && (
+              <div
+                className="rounded-md border border-primary/30 bg-primary/5 p-4 md:col-span-2"
+                data-testid="section-founder-single-answer"
+              >
+                <h2 className="font-semibold text-sm mb-1">{founderSingleAnswer.headline}</h2>
+                <p className="text-xs text-muted-foreground mb-1">
+                  {founderSingleAnswer.portfolioSummary}
+                </p>
+                <p className="text-sm mb-3">{founderSingleAnswer.launchRecommendation}</p>
+                <div className="grid md:grid-cols-2 gap-2">
+                  {founderSingleAnswer.lanes.map((lane) => (
+                    <div
+                      key={lane.key}
+                      className="rounded border border-border/30 bg-background/40 p-2 text-xs"
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <p className="font-medium">{lane.label}</p>
+                        <span
+                          className={`uppercase text-[10px] ${
+                            lane.status === "strong"
+                              ? "text-emerald-400"
+                              : lane.status === "watch"
+                                ? "text-yellow-400"
+                                : "text-red-400"
+                          }`}
+                        >
+                          {lane.status.replace("_", " ")}
+                        </span>
+                      </div>
+                      <p className="text-muted-foreground">{lane.summary}</p>
+                      <p className="text-muted-foreground mt-1">Signals: {lane.signalCount}</p>
+                      {lane.sampleFindingTitles.length > 0 && (
+                        <p className="text-muted-foreground">
+                          Examples: {lane.sampleFindingTitles.join("; ")}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {enterpriseRejector && enterpriseRejector.objections.length > 0 && (
+              <div
+                className="rounded-md border border-red-500/30 bg-red-500/5 p-4 md:col-span-2"
+                data-testid="section-enterprise-rejector"
+              >
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <h2 className="font-semibold text-sm">{enterpriseRejector.headline}</h2>
+                  <span className="text-[10px] uppercase tracking-wider text-red-300">
+                    {enterpriseRejector.confidenceLabel}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">
+                  {enterpriseRejector.manualReviewPrompt}
+                </p>
+                <div className="space-y-2">
+                  {enterpriseRejector.objections.map((objection) => (
+                    <div
+                      key={objection.title}
+                      className="rounded border border-border/30 bg-background/40 p-2 text-xs"
+                    >
+                      <p className="font-medium text-sm">{objection.title}</p>
+                      <p className="text-muted-foreground">{objection.reason}</p>
+                      <p className="text-muted-foreground mt-1">
+                        Signals: {objection.sampleFindingTitles.join("; ")}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div
+              className="rounded-md border border-border/40 bg-card/30 p-4 md:col-span-2"
+              data-testid="section-launch-readiness-score"
+            >
               <div className="flex items-center justify-between gap-2 mb-2">
                 <h2 className="font-semibold text-sm">Launch Readiness Score</h2>
                 <span className="text-lg font-semibold flex items-center gap-1">
@@ -510,44 +691,78 @@ ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mb-2">
-                Composite formula: 40% security + 35% stability + 25% operability (maintainability/scalability/CI-CD blend).
+                Composite formula: 40% security + 35% stability + 25% operability
+                (maintainability/scalability/CI-CD blend).
               </p>
               <div className="grid md:grid-cols-3 gap-2 text-xs">
-                <div className="border border-border/30 rounded p-2">Security: {launchReadinessScore(audit).security}</div>
-                <div className="border border-border/30 rounded p-2">Stability: {launchReadinessScore(audit).stability}</div>
-                <div className="border border-border/30 rounded p-2">Operability: {launchReadinessScore(audit).operability}</div>
+                <div className="border border-border/30 rounded p-2">
+                  Security: {launchReadinessScore(audit).security}
+                </div>
+                <div className="border border-border/30 rounded p-2">
+                  Stability: {launchReadinessScore(audit).stability}
+                </div>
+                <div className="border border-border/30 rounded p-2">
+                  Operability: {launchReadinessScore(audit).operability}
+                </div>
               </div>
             </div>
-            <div className="rounded-md border border-border/40 bg-card/30 p-4 md:col-span-2" data-testid="section-cloud-mini-audit">
+            <div
+              className="rounded-md border border-border/40 bg-card/30 p-4 md:col-span-2"
+              data-testid="section-cloud-mini-audit"
+            >
               <h2 className="font-semibold text-sm mb-2">CI/CD + Cloud Posture Mini-Audit</h2>
-              <p className="text-xs text-muted-foreground mb-3">Fast checks for launch blockers: rate limiting, CSP, session cookies, secret scanning, and backups.</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                Fast checks for launch blockers: rate limiting, CSP, session cookies, secret
+                scanning, and backups.
+              </p>
               <div className="grid gap-2">
                 {miniAuditChecks.map((check) => (
-                  <div key={check.key} className="border border-border/30 rounded p-2 text-xs flex items-start justify-between gap-2">
+                  <div
+                    key={check.key}
+                    className="border border-border/30 rounded p-2 text-xs flex items-start justify-between gap-2"
+                  >
                     <div>
                       <p className="font-medium">{check.title}</p>
                       <p className="text-muted-foreground">{check.reason}</p>
                     </div>
                     <div className="text-right">
-                      <span className={`uppercase text-[10px] ${check.status === "pass" ? "text-emerald-400" : check.status === "fail" ? "text-red-400" : "text-yellow-400"}`}>{check.status}</span>
+                      <span
+                        className={`uppercase text-[10px] ${check.status === "pass" ? "text-emerald-400" : check.status === "fail" ? "text-red-400" : "text-yellow-400"}`}
+                      >
+                        {check.status}
+                      </span>
                       <p className="text-muted-foreground">{check.owner}</p>
                     </div>
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-muted-foreground mt-2">Pass: {miniAuditSummary.pass} • Fail: {miniAuditSummary.fail} • Unknown: {miniAuditSummary.unknown}</p>
+              <p className="text-xs text-muted-foreground mt-2">
+                Pass: {miniAuditSummary.pass} • Fail: {miniAuditSummary.fail} • Unknown:{" "}
+                {miniAuditSummary.unknown}
+              </p>
             </div>
-            <div className="rounded-md border border-border/40 bg-card/30 p-4 md:col-span-2" data-testid="section-ai-to-ticket">
+            <div
+              className="rounded-md border border-border/40 bg-card/30 p-4 md:col-span-2"
+              data-testid="section-ai-to-ticket"
+            >
               <h2 className="font-semibold text-sm mb-2">AI-to-ticket remediation backlog</h2>
-              <p className="text-xs text-muted-foreground mb-3">Generated, scoped tasks with owner suggestions and acceptance criteria for immediate sprint planning.</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                Generated, scoped tasks with owner suggestions and acceptance criteria for immediate
+                sprint planning.
+              </p>
               <div className="space-y-2">
                 {ticketDrafts.slice(0, 3).map((ticket) => (
-                  <div key={ticket.finding.id} className="border border-border/30 rounded p-2 text-xs">
+                  <div
+                    key={ticket.finding.id}
+                    className="border border-border/30 rounded p-2 text-xs"
+                  >
                     <p className="font-medium text-sm">{ticket.finding.title}</p>
                     <p className="text-muted-foreground mb-1">{ticket.scope}</p>
                     <ul className="space-y-0.5">
                       {ticket.acceptanceCriteria.map((criterion) => (
-                        <li key={criterion} className="text-foreground/80">• {criterion}</li>
+                        <li key={criterion} className="text-foreground/80">
+                          • {criterion}
+                        </li>
                       ))}
                     </ul>
                   </div>
@@ -558,20 +773,29 @@ ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
               <h2 className="font-semibold text-sm mb-2">Top 3 Existential Risks</h2>
               <div className="space-y-2">
                 {topExistentialRisks.map((risk) => (
-                  <div key={risk.id} className="text-sm flex items-center justify-between gap-2 border border-border/30 rounded p-2">
+                  <div
+                    key={risk.id}
+                    className="text-sm flex items-center justify-between gap-2 border border-border/30 rounded p-2"
+                  >
                     <span>{risk.title}</span>
-                    <span className="text-xs text-muted-foreground">Risk score {risk.riskScore}</span>
+                    <span className="text-xs text-muted-foreground">
+                      Risk score {risk.riskScore}
+                    </span>
                   </div>
                 ))}
               </div>
             </div>
             <div className="rounded-md border border-border/40 bg-card/30 p-4 md:col-span-2">
-              <h2 className="font-semibold text-sm mb-2">Fastest fixes with highest risk reduction</h2>
+              <h2 className="font-semibold text-sm mb-2">
+                Fastest fixes with highest risk reduction
+              </h2>
               <div className="grid gap-2 md:grid-cols-2">
                 {quickestHighReduction.map((fix) => (
                   <div key={fix.id} className="border border-border/30 rounded p-2 text-xs">
                     <p className="font-medium text-sm">{fix.title}</p>
-                    <p className="text-muted-foreground">{fix.effortBucket} • {fix.owner} • score {fix.riskScore}</p>
+                    <p className="text-muted-foreground">
+                      {fix.effortBucket} • {fix.owner} • score {fix.riskScore}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -581,10 +805,14 @@ ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
               <div className="grid md:grid-cols-3 gap-3">
                 {(["1 hour", "1 day", "1 week"] as const).map((bucket) => (
                   <div key={bucket} className="border border-border/30 rounded p-3">
-                    <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">{bucket}</h3>
+                    <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+                      {bucket}
+                    </h3>
                     <ul className="space-y-1">
                       {byEffort[bucket].slice(0, 4).map((item) => (
-                        <li key={item.id} className="text-xs text-foreground/80">• {item.title}</li>
+                        <li key={item.id} className="text-xs text-foreground/80">
+                          • {item.title}
+                        </li>
                       ))}
                     </ul>
                   </div>
@@ -592,10 +820,20 @@ ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
               </div>
             </div>
             <div className="rounded-md border border-border/40 bg-card/30 p-4 md:col-span-2 flex gap-2 flex-wrap">
-              <Button size="sm" variant="outline" onClick={handleExportJira} data-testid="button-export-jira">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleExportJira}
+                data-testid="button-export-jira"
+              >
                 <Download className="w-3.5 h-3.5 mr-1" /> Export Jira CSV
               </Button>
-              <Button size="sm" variant="outline" onClick={handleExportLinear} data-testid="button-export-linear">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleExportLinear}
+                data-testid="button-export-linear"
+              >
                 <Download className="w-3.5 h-3.5 mr-1" /> Export Linear Markdown
               </Button>
             </div>
@@ -632,7 +870,11 @@ ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
             {repoMeta && (
               <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap mb-3">
                 <span className="flex items-center gap-1">
-                  {repoMeta.isPrivate ? <Lock className="w-3 h-3" /> : <Globe className="w-3 h-3" />}
+                  {repoMeta.isPrivate ? (
+                    <Lock className="w-3 h-3" />
+                  ) : (
+                    <Globe className="w-3 h-3" />
+                  )}
                   {repoMeta.isPrivate ? "Private" : "Public"}
                 </span>
                 <span className="flex items-center gap-1">
@@ -650,9 +892,7 @@ ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
                   </span>
                 )}
                 {Object.keys(repoMeta.languages).length > 0 && (
-                  <span>
-                    {Object.keys(repoMeta.languages).slice(0, 4).join(", ")}
-                  </span>
+                  <span>{Object.keys(repoMeta.languages).slice(0, 4).join(", ")}</span>
                 )}
               </div>
             )}
@@ -668,7 +908,9 @@ ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
           {isComplete && audit.securityScore != null && (
             <div className="flex-shrink-0 flex items-center justify-center">
               <div className="text-center">
-                <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Vibe-Code Score</p>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+                  Vibe-Code Score
+                </p>
                 <ScoreRadar audit={audit} size={200} />
               </div>
             </div>
@@ -676,21 +918,31 @@ ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
         </div>
 
         {isScanning && (
-          <div className="rounded-md border border-blue-500/20 bg-blue-500/5 p-5" data-testid="section-scanning">
+          <div
+            className="rounded-md border border-blue-500/20 bg-blue-500/5 p-5"
+            data-testid="section-scanning"
+          >
             <div className="flex items-center gap-2 mb-3">
               <RefreshCw className="w-4 h-4 text-blue-400 animate-spin" />
               <h2 className="font-semibold text-sm text-blue-400">Scan In Progress</h2>
             </div>
             <p className="text-xs text-blue-100/80 mb-3">
-              Queue-backed scan limits: {SCAN_LIMITS.maxFilesToScan.toLocaleString()} files and {formatRepoSizeLimitMb()} repository size.
+              Queue-backed scan limits: {SCAN_LIMITS.maxFilesToScan.toLocaleString()} files and{" "}
+              {formatRepoSizeLimitMb()} repository size.
             </p>
             {scanLog && scanLog.length > 0 && (
               <div className="space-y-1">
                 {scanLog.map((entry, i) => (
                   <div key={i} className="flex items-start gap-2 text-xs">
-                    <span className={`mt-0.5 w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                      entry.status === "ok" ? "bg-emerald-500" : entry.status === "warn" ? "bg-yellow-500" : "bg-red-500"
-                    }`} />
+                    <span
+                      className={`mt-0.5 w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                        entry.status === "ok"
+                          ? "bg-emerald-500"
+                          : entry.status === "warn"
+                            ? "bg-yellow-500"
+                            : "bg-red-500"
+                      }`}
+                    />
                     <span className="text-muted-foreground font-mono">{entry.step}</span>
                     <span className="text-foreground/70">{entry.message}</span>
                   </div>
@@ -701,7 +953,10 @@ ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
         )}
 
         {audit.executiveSummary && (
-          <div className="rounded-md border border-border/40 bg-card/30 p-5" data-testid="section-executive-summary">
+          <div
+            className="rounded-md border border-border/40 bg-card/30 p-5"
+            data-testid="section-executive-summary"
+          >
             <div className="flex items-center gap-2 mb-3">
               <AlertTriangle className="w-4 h-4 text-yellow-500" />
               <h2 className="font-semibold text-sm">Executive Summary</h2>
@@ -711,20 +966,46 @@ ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
         )}
 
         {isComplete && audit.securityScore != null && (
-          <div className="rounded-md border border-border/40 bg-card/30 p-5" data-testid="section-scores">
+          <div
+            className="rounded-md border border-border/40 bg-card/30 p-5"
+            data-testid="section-scores"
+          >
             <h2 className="font-semibold text-sm mb-4">Risk Assessment</h2>
             <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
-              <ScoreBar label="Security" score={audit.securityScore} icon={<Shield className="w-full h-full" />} />
-              <ScoreBar label="Stability" score={audit.stabilityScore} icon={<Zap className="w-full h-full" />} />
-              <ScoreBar label="Maintainability" score={audit.maintainabilityScore} icon={<Wrench className="w-full h-full" />} />
-              <ScoreBar label="Scalability" score={audit.scalabilityScore} icon={<TrendingUp className="w-full h-full" />} />
-              <ScoreBar label="CI/CD" score={audit.cicdScore} icon={<GitBranch className="w-full h-full" />} />
+              <ScoreBar
+                label="Security"
+                score={audit.securityScore}
+                icon={<Shield className="w-full h-full" />}
+              />
+              <ScoreBar
+                label="Stability"
+                score={audit.stabilityScore}
+                icon={<Zap className="w-full h-full" />}
+              />
+              <ScoreBar
+                label="Maintainability"
+                score={audit.maintainabilityScore}
+                icon={<Wrench className="w-full h-full" />}
+              />
+              <ScoreBar
+                label="Scalability"
+                score={audit.scalabilityScore}
+                icon={<TrendingUp className="w-full h-full" />}
+              />
+              <ScoreBar
+                label="CI/CD"
+                score={audit.cicdScore}
+                icon={<GitBranch className="w-full h-full" />}
+              />
             </div>
           </div>
         )}
 
         {isComplete && !isPaid && findings && findings.length > 0 && (
-          <div className="rounded-md border border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-amber-600/10 p-6" data-testid="section-paywall">
+          <div
+            className="rounded-md border border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-amber-600/10 p-6"
+            data-testid="section-paywall"
+          >
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 mb-2">
@@ -732,9 +1013,9 @@ ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
                   <h2 className="font-semibold text-lg text-amber-50">Unlock Full Remediation</h2>
                 </div>
                 <p className="text-sm text-amber-200/70 max-w-lg">
-                  We found <strong className="text-amber-200">{findings.length} issues</strong> in your codebase.
-                  Unlock this audit to get step-by-step fix instructions, code evidence, and a
-                  14-day remediation roadmap tailored to your repository.
+                  We found <strong className="text-amber-200">{findings.length} issues</strong> in
+                  your codebase. Unlock this audit to get step-by-step fix instructions, code
+                  evidence, and a 14-day remediation roadmap tailored to your repository.
                 </p>
                 <div className="flex items-center gap-4 mt-3 text-xs text-amber-300/60">
                   <span className="flex items-center gap-1">
@@ -774,7 +1055,10 @@ ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
         )}
 
         {fileTree && fileTree.length > 0 && (
-          <div className="rounded-md border border-border/40 bg-card/30" data-testid="section-file-tree">
+          <div
+            className="rounded-md border border-border/40 bg-card/30"
+            data-testid="section-file-tree"
+          >
             <button
               onClick={() => setShowFileTree(!showFileTree)}
               className="w-full text-left p-4 flex items-center justify-between"
@@ -787,7 +1071,11 @@ ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
                   ({fileTree.filter((f) => f.type === "file").length} files)
                 </span>
               </div>
-              {showFileTree ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+              {showFileTree ? (
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              )}
             </button>
             {showFileTree && (
               <div className="border-t border-border/30 p-4 max-h-72 overflow-y-auto">
@@ -802,7 +1090,9 @@ ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
                         <span className="truncate">{file.path}</span>
                         {file.size && (
                           <span className="text-muted-foreground/40 ml-auto flex-shrink-0">
-                            {file.size > 1024 ? `${(file.size / 1024).toFixed(1)}KB` : `${file.size}B`}
+                            {file.size > 1024
+                              ? `${(file.size / 1024).toFixed(1)}KB`
+                              : `${file.size}B`}
                           </span>
                         )}
                       </div>
@@ -837,7 +1127,9 @@ ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
                     <button
                       key={sev}
                       data-testid={`button-filter-${sev}`}
-                      onClick={() => setSeverityFilter(severityFilter === sev ? "all" : (sev as SeverityFilter))}
+                      onClick={() =>
+                        setSeverityFilter(severityFilter === sev ? "all" : (sev as SeverityFilter))
+                      }
                       className={`flex items-center gap-1 transition-opacity ${
                         severityFilter !== "all" && severityFilter !== sev ? "opacity-40" : ""
                       }`}
@@ -851,7 +1143,9 @@ ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
             </div>
 
             <div className="flex items-center gap-1.5 mb-4 flex-wrap">
-              {(["all", "security", "stability", "maintainability", "scalability", "cicd"] as const).map((cat) => (
+              {(
+                ["all", "security", "stability", "maintainability", "scalability", "cicd"] as const
+              ).map((cat) => (
                 <Button
                   key={cat}
                   variant={categoryFilter === cat ? "secondary" : "ghost"}
@@ -860,7 +1154,11 @@ ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
                   data-testid={`button-category-${cat}`}
                   className="text-xs h-7"
                 >
-                  {cat === "all" ? "All" : cat === "cicd" ? "CI/CD" : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                  {cat === "all"
+                    ? "All"
+                    : cat === "cicd"
+                      ? "CI/CD"
+                      : cat.charAt(0).toUpperCase() + cat.slice(1)}
                 </Button>
               ))}
             </div>
@@ -882,7 +1180,10 @@ ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
         )}
 
         {isPaid && remediationPlan && remediationPlan.length > 0 && (
-          <div className="rounded-md border border-border/40 bg-card/30 p-5" data-testid="section-remediation">
+          <div
+            className="rounded-md border border-border/40 bg-card/30 p-5"
+            data-testid="section-remediation"
+          >
             <h2 className="font-semibold text-sm mb-5">Remediation Roadmap</h2>
             <div className="space-y-4">
               {remediationPlan.map((phase, i) => (
@@ -893,8 +1194,8 @@ ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
                         i === 0
                           ? "bg-red-500/10 text-red-400"
                           : i === 1
-                          ? "bg-yellow-500/10 text-yellow-400"
-                          : "bg-emerald-500/10 text-emerald-400"
+                            ? "bg-yellow-500/10 text-yellow-400"
+                            : "bg-emerald-500/10 text-emerald-400"
                       }`}
                     >
                       {i === 0 ? (
@@ -932,11 +1233,16 @@ ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
         )}
 
         {!isPaid && isComplete && findings && findings.length > 0 && (
-          <div className="rounded-md border border-border/40 bg-card/30 p-5 relative overflow-hidden" data-testid="section-remediation-locked">
+          <div
+            className="rounded-md border border-border/40 bg-card/30 p-5 relative overflow-hidden"
+            data-testid="section-remediation-locked"
+          >
             <div className="absolute inset-0 backdrop-blur-sm bg-background/60 z-10 flex flex-col items-center justify-center">
               <Lock className="w-8 h-8 text-amber-400 mb-3" />
               <h3 className="font-semibold text-sm mb-1">Remediation Roadmap Locked</h3>
-              <p className="text-xs text-muted-foreground mb-3">Unlock to see your 14-day fix plan</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                Unlock to see your 14-day fix plan
+              </p>
               <Button
                 onClick={() => checkoutMutation.mutate()}
                 disabled={checkoutMutation.isPending}
@@ -980,7 +1286,10 @@ ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
         )}
 
         {scanLog && scanLog.length > 0 && isComplete && (
-          <div className="rounded-md border border-border/40 bg-card/30" data-testid="section-scan-log">
+          <div
+            className="rounded-md border border-border/40 bg-card/30"
+            data-testid="section-scan-log"
+          >
             <button
               onClick={() => setShowScanLog(!showScanLog)}
               className="w-full text-left p-4 flex items-center justify-between"
@@ -991,16 +1300,28 @@ ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
                 <h2 className="font-semibold text-sm">Scan Log</h2>
                 <span className="text-xs text-muted-foreground">({scanLog.length} steps)</span>
               </div>
-              {showScanLog ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+              {showScanLog ? (
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              )}
             </button>
             {showScanLog && (
               <div className="border-t border-border/30 p-4 space-y-1.5">
                 {scanLog.map((entry, i) => (
                   <div key={i} className="flex items-start gap-2 text-xs">
-                    <span className={`mt-0.5 w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                      entry.status === "ok" ? "bg-emerald-500" : entry.status === "warn" ? "bg-yellow-500" : "bg-red-500"
-                    }`} />
-                    <span className="text-muted-foreground font-mono w-24 flex-shrink-0">{entry.step}</span>
+                    <span
+                      className={`mt-0.5 w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                        entry.status === "ok"
+                          ? "bg-emerald-500"
+                          : entry.status === "warn"
+                            ? "bg-yellow-500"
+                            : "bg-red-500"
+                      }`}
+                    />
+                    <span className="text-muted-foreground font-mono w-24 flex-shrink-0">
+                      {entry.step}
+                    </span>
                     <span className="text-foreground/70">{entry.message}</span>
                   </div>
                 ))}
@@ -1010,7 +1331,10 @@ ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
         )}
 
         {audit.biggestConcern && (
-          <div className="rounded-md border border-border/40 bg-card/30 p-5" data-testid="section-concern">
+          <div
+            className="rounded-md border border-border/40 bg-card/30 p-5"
+            data-testid="section-concern"
+          >
             <h2 className="font-semibold text-sm mb-2">Client's Biggest Concern</h2>
             <p className="text-sm text-muted-foreground italic">"{audit.biggestConcern}"</p>
           </div>
@@ -1023,8 +1347,8 @@ ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
             </div>
             <h3 className="font-semibold text-lg mb-2">Ready to Scan</h3>
             <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
-              Click the button below to start an automated security and quality scan of this repository.
-              We'll fetch the file tree, analyze code patterns, and generate findings.
+              Click the button below to start an automated security and quality scan of this
+              repository. We'll fetch the file tree, analyze code patterns, and generate findings.
             </p>
             <Button
               onClick={() => scanMutation.mutate()}

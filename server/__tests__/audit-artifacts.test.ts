@@ -79,4 +79,8 @@ test("buildAuditBusinessAssets returns concrete artifact outputs", () => {
   assert.equal(assets.artifacts.jiraLinearIssueExport.issues.length, 2);
   assert.match(assets.artifacts.jiraLinearIssueExport.jiraCsv, /Summary,Description,Priority/);
   assert.match(assets.artifacts.jiraLinearIssueExport.linearMarkdown, /- \[ \]/);
+  assert.match(assets.artifacts.enterpriseProspectRejector.headline, /enterprise prospect/i);
+  assert.ok(assets.artifacts.enterpriseProspectRejector.objections.length >= 1);
+  assert.match(assets.artifacts.founderSingleAnswer.headline, /one sane answer/i);
+  assert.equal(assets.artifacts.founderSingleAnswer.lanes.length, 6);
 });
