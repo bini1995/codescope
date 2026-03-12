@@ -10,6 +10,7 @@ import { z } from "zod";
 import { randomBytes } from "crypto";
 import { submitAuditSchema, updateAuditSchema } from "./auditSchemas";
 import { db } from "./db";
+import { buildAuditBusinessAssets } from "./auditArtifacts";
 import { sql } from "drizzle-orm";
 import {
   clearAuthSession,
@@ -245,6 +246,53 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       return res.json(gated);
     }
     res.json(findings);
+  });
+
+
+  app.get("/api/audits/:id/business-assets", requireAuth, async (req, res) => {
+    const audit = await storage.getAudit(String(req.params.id), req.auth!.sub);
+    if (!audit) return res.status(404).json({ message: "Audit not found" });
+
+    const findings = await storage.getFindingsByAudit(String(req.params.id), req.auth!.sub);
+    const isPaid = !!audit.paidAt;
+    const usableFindings = isPaid
+      ? findings
+      : findings.map((f) => ({ ...f, fixSteps: "Unlock this audit to see fix steps", codeSnippet: null }));
+
+    const assets = buildAuditBusinessAssets(audit, usableFindings);
+    res.json({ ...assets, isPaid });
+  });
+
+  app.get("/api/audits/:id/exports/jira.csv", requireAuth, async (req, res) => {
+    const audit = await storage.getAudit(String(req.params.id), req.auth!.sub);
+    if (!audit) return res.status(404).json({ message: "Audit not found" });
+
+    const findings = await storage.getFindingsByAudit(String(req.params.id), req.auth!.sub);
+    const isPaid = !!audit.paidAt;
+    const usableFindings = isPaid
+      ? findings
+      : findings.map((f) => ({ ...f, fixSteps: "Unlock this audit to see fix steps", codeSnippet: null }));
+
+    const assets = buildAuditBusinessAssets(audit, usableFindings);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${audit.repoName || "audit"}-jira-backlog.csv"`);
+    res.send(assets.artifacts.jiraLinearIssueExport.jiraCsv);
+  });
+
+  app.get("/api/audits/:id/exports/linear.md", requireAuth, async (req, res) => {
+    const audit = await storage.getAudit(String(req.params.id), req.auth!.sub);
+    if (!audit) return res.status(404).json({ message: "Audit not found" });
+
+    const findings = await storage.getFindingsByAudit(String(req.params.id), req.auth!.sub);
+    const isPaid = !!audit.paidAt;
+    const usableFindings = isPaid
+      ? findings
+      : findings.map((f) => ({ ...f, fixSteps: "Unlock this audit to see fix steps", codeSnippet: null }));
+
+    const assets = buildAuditBusinessAssets(audit, usableFindings);
+    res.setHeader("Content-Type", "text/markdown; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${audit.repoName || "audit"}-linear-backlog.md"`);
+    res.send(assets.artifacts.jiraLinearIssueExport.linearMarkdown);
   });
 
   app.post("/api/audits", requireAuth, async (req, res) => {

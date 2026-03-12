@@ -171,11 +171,96 @@ export default function Landing() {
   ];
 
   const audienceList = [
-    "Founders shipping AI-generated apps before launch",
-    "Agencies building MVPs across multiple client repos",
-    "Small teams post-funding that need reliability now",
-    "Teams preparing for enterprise pilots or procurement reviews",
-    "Engineering leads doing pre-launch or post-incident hardening",
+    "Founders preparing for launch week and first real users",
+    "Teams entering investor or enterprise diligence",
+    "Startups stabilizing after a fast AI-built MVP",
+    "Founders hiring their first engineer and handing off the codebase",
+    "Companies inheriting code after agency or freelancer delivery",
+  ];
+
+  const urgencyOffers = [
+    {
+      title: "Pre-launch readiness audit",
+      detail: "Find launch blockers before customers, press, or partners hit your product.",
+    },
+    {
+      title: "Post-MVP stabilization audit",
+      detail: "Clean up vibe-coded shortcuts and reduce incidents before you scale.",
+    },
+    {
+      title: "Investor / enterprise diligence audit",
+      detail: "Prepare technical risk answers for fundraise, procurement, and security reviews.",
+    },
+  ];
+
+  const aiFailurePatterns = [
+    {
+      pattern: "Hallucination Surface",
+      detail: "Invented packages, APIs, and implementation assumptions that quietly fail in prod.",
+    },
+    {
+      pattern: "Auth & Permission Fragility",
+      detail: "Access checks that look present but miss key routes, roles, or tenant boundaries.",
+    },
+    {
+      pattern: "Dependency Sprawl",
+      detail: "Bloated or conflicting dependency trees that increase exploit and outage risk.",
+    },
+    {
+      pattern: "Duplicated Business Logic",
+      detail: "Same rules copied across controllers and services, causing drift and defects.",
+    },
+    {
+      pattern: "Dead Routes & Ghost Features",
+      detail: "Unreachable endpoints, abandoned flows, and UI paths no one can complete.",
+    },
+    {
+      pattern: "Prompt-to-Production Drift",
+      detail: "Code diverges from intended prompts and specs, creating hidden behavior gaps.",
+    },
+    {
+      pattern: "Missing Operational Controls",
+      detail: "No rate limits, weak observability, and absent rollback/guardrail mechanisms.",
+    },
+    {
+      pattern: "Shallow Test Confidence",
+      detail: "Tests pass happy paths only and miss auth, edge-case, and failure-mode behavior.",
+    },
+    {
+      pattern: "Insecure Tutorial Defaults",
+      detail: "Copied starter patterns leave weak CORS, secret handling, and unsafe file flows.",
+    },
+    {
+      pattern: "Pseudo-Architecture",
+      detail: "Looks modular in diagrams but breaks under real load, concurrency, or retries.",
+    },
+  ];
+
+  const internalArtifacts = [
+    {
+      title: "CTO Summary Memo",
+      detail: "Executive technical risk brief for leadership alignment and fast prioritization.",
+    },
+    {
+      title: "Founder One-Pager",
+      detail: "Business-language snapshot of launch blockers, confidence level, and next decisions.",
+    },
+    {
+      title: "Jira / Linear Issue Export",
+      detail: "Ready-to-import ticket payloads with severity, owner suggestion, and acceptance criteria.",
+    },
+    {
+      title: '"Send This to Your Dev" Handoff Brief',
+      detail: "Copy-ready implementation brief so non-technical stakeholders can delegate clearly.",
+    },
+    {
+      title: "Enterprise Security Questionnaire Helper",
+      detail: "Mapped responses and evidence pointers to accelerate security reviews and procurement.",
+    },
+    {
+      title: "Pre-sales Technical Trust Report",
+      detail: "Customer-facing trust artifact to support technical objections and close deals faster.",
+    },
   ];
 
   const trustTools = [
@@ -288,7 +373,7 @@ export default function Landing() {
           </h1>
 
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-6 leading-relaxed" data-testid="text-hero-subtitle">
-            A decision engine for AI-built SaaS teams.
+            Audits packaged around moments of urgency, not generic checklists.
             Translate code risk into launch risk, revenue risk, and operational risk.
           </p>
 
@@ -334,7 +419,7 @@ export default function Landing() {
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-bold mb-3" data-testid="text-value-title">What CodeAudit Decides For You</h2>
             <p className="text-muted-foreground text-sm max-w-lg mx-auto">
-              We convert technical signal into business-priority action plans, not scanner noise.
+              AI-built products fail in recognizable patterns. We map those patterns faster than generic scanners.
             </p>
           </div>
 
@@ -356,6 +441,28 @@ export default function Landing() {
                 </p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="pb-20 px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="rounded-md border border-border/40 bg-card/20 p-6 sm:p-8">
+            <div className="text-center mb-8">
+              <p className="text-xs uppercase tracking-wider text-primary/80 mb-2" data-testid="text-framework-kicker">CodeAudit SignalLens™</p>
+              <h2 className="text-2xl sm:text-3xl font-bold mb-3" data-testid="text-framework-title">Our proprietary AI-built repo failure framework</h2>
+              <p className="text-sm text-muted-foreground max-w-2xl mx-auto" data-testid="text-framework-subtitle">
+                We do not run a generic audit. We detect recurring AI-build failure patterns and turn them into a prioritized remediation plan.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {aiFailurePatterns.map((item) => (
+                <div key={item.pattern} className="rounded-md border border-border/40 bg-background/60 p-4">
+                  <p className="text-sm font-semibold mb-1">{item.pattern}</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{item.detail}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -601,6 +708,19 @@ export default function Landing() {
 
       <section className="pb-14 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto">
+          <h3 className="text-lg font-semibold text-center mb-2" data-testid="text-urgency-offers-title">Start with the fastest urgent offers</h3>
+          <p className="text-center text-xs text-muted-foreground mb-5">
+            Urgency beats curiosity. Sell a painful moment and a clear readiness outcome.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-8">
+            {urgencyOffers.map((offer) => (
+              <div key={offer.title} className="rounded-md border border-border/40 bg-card/20 p-4">
+                <p className="text-sm font-medium mb-1">{offer.title}</p>
+                <p className="text-xs text-muted-foreground">{offer.detail}</p>
+              </div>
+            ))}
+          </div>
+
           <h3 className="text-lg font-semibold text-center mb-2" data-testid="text-offer-modes">Dual-mode output for founders and engineers</h3>
           <p className="text-center text-xs text-muted-foreground mb-5">
             Sell clarity to the founder, and execution detail to the engineering team.
@@ -626,6 +746,25 @@ export default function Landing() {
                 <li>• Prioritized sequencing for remediation sprints</li>
               </ul>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="pb-16 px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-6">
+            <h3 className="text-lg font-semibold mb-2" data-testid="text-artifacts-title">Artifacts your team can use immediately</h3>
+            <p className="text-xs text-muted-foreground max-w-2xl mx-auto">
+              We do not just deliver findings. We deliver internal assets that remove meetings and speed execution across leadership, product, engineering, and sales.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {internalArtifacts.map((artifact) => (
+              <div key={artifact.title} className="rounded-md border border-border/40 bg-card/20 p-4" data-testid={`artifact-card-${artifact.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}>
+                <p className="text-sm font-medium mb-1">{artifact.title}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">{artifact.detail}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
