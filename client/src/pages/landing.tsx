@@ -590,37 +590,60 @@ export default function Landing() {
             <h2 className="text-2xl sm:text-3xl font-bold mb-3" data-testid="text-how-title">How It Works</h2>
             <p className="text-muted-foreground text-sm">From findings to clear action in 3 steps</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {[
               {
                 step: "1",
-                title: "Run Instant Scan Preview",
-                desc: "Immediately get repo metadata, file tree visibility, 10 heuristic checks, and initial risk signal.",
-                icon: <GitFork className="w-5 h-5" />,
+                title: "Instant Scan",
+                desc: "Upload your repo URL and instantly receive repo metadata, file tree visibility, heuristic checks, and an early risk signal.",
+                icon: <Zap className="w-5 h-5" />,
               },
               {
                 step: "2",
-                title: "Map Business Impact",
-                desc: "We translate findings into launch blockers, revenue risks, and operational risk with clear severity.",
-                icon: <Scan className="w-5 h-5" />,
+                title: "Expert Review",
+                desc: "We map technical findings to launch blockers, compliance gaps, and business risk with clear severity and ownership.",
+                icon: <Users className="w-5 h-5" />,
               },
               {
                 step: "3",
-                title: "Execute the Sprint Plan",
-                desc: "Get a prioritized remediation sprint plan and optional implementation PRs for the highest-impact fixes.",
-                icon: <FileText className="w-5 h-5" />,
+                title: "Ship Fixes",
+                desc: "Get a prioritized sprint plan plus implementation-ready recommendations so your team can ship the highest-impact fixes fast.",
+                icon: <Rocket className="w-5 h-5" />,
               },
             ].map((item, i) => (
-              <div key={i} className="text-center" data-testid={`step-${i}`}>
-                <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-4">
-                  {item.icon}
+              <div key={i} className="relative" data-testid={`step-${i}`}>
+                <div className="rounded-md border border-border/40 bg-card/30 p-5 h-full text-center hover-elevate">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-4">
+                    {item.icon}
+                  </div>
+                  <div className="text-xs text-muted-foreground/60 uppercase tracking-wider mb-1.5">Step {item.step}</div>
+                  <h3 className="font-semibold text-sm mb-2">{item.title}</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
                 </div>
-                <div className="text-xs text-muted-foreground/60 uppercase tracking-wider mb-1.5">Step {item.step}</div>
-                <h3 className="font-semibold text-sm mb-2">{item.title}</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
+                {i < 2 && (
+                  <ArrowRight className="hidden md:block w-4 h-4 text-muted-foreground/40 absolute -right-2.5 top-1/2 -translate-y-1/2" />
+                )}
               </div>
             ))}
           </div>
+
+          <div className="mt-6 rounded-md border border-border/40 bg-card/20 p-4 sm:p-5">
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div>
+                <p className="text-xs uppercase tracking-wider text-primary/80 mb-1">Quick Walkthrough</p>
+                <h3 className="text-sm sm:text-base font-semibold">12-second preview: repo upload → instant signal</h3>
+              </div>
+              <Video className="w-4 h-4 text-primary mt-0.5" />
+            </div>
+            <img
+              src="https://media.giphy.com/media/ZVik7pBtu9dNS/giphy.gif"
+              alt="Animated demo of uploading a repository and getting the instant CodeAudit preview"
+              className="w-full max-h-64 object-cover rounded-md border border-border/40"
+              loading="lazy"
+              data-testid="img-how-it-works-demo"
+            />
+          </div>
+
           <div className="mt-5 rounded-md border border-border/40 bg-background/40 px-4 py-3 text-xs text-muted-foreground">
             Scan limits: up to <span className="font-medium text-foreground">{SCAN_LIMITS.maxFilesToScan.toLocaleString()} files</span> and <span className="font-medium text-foreground">{formatRepoSizeLimitMb()}</span> repository size per scan.
           </div>
@@ -748,36 +771,28 @@ export default function Landing() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
             {pricingTiers.map((tier, i) => (
               <div
                 key={i}
                 data-testid={`pricing-tier-${tier.name.toLowerCase()}`}
-                className={`rounded-md border p-6 flex flex-col ${
+                className={`relative rounded-md border p-5 flex flex-col ${
                   tier.popular
                     ? "border-primary/50 bg-primary/5 ring-1 ring-primary/20"
                     : "border-border/40 bg-card/30"
                 }`}
               >
                 {tier.popular && (
-                  <div className="text-[10px] uppercase tracking-wider text-primary font-semibold mb-2">
+                  <div className="absolute -top-2.5 left-4 inline-flex items-center rounded-full border border-primary/40 bg-primary px-2.5 py-1 text-[10px] uppercase tracking-wider text-primary-foreground font-semibold shadow-sm">
                     Most Popular
                   </div>
                 )}
-                <h3 className="text-lg font-bold mb-1">{tier.name}</h3>
+                <h3 className="text-base font-bold mb-1 mt-2">{tier.name}</h3>
                 <div className="flex items-baseline gap-1 mb-2">
-                  <span className="text-3xl font-bold">{tier.price}</span>
+                  <span className="text-2xl font-bold">{tier.price}</span>
                   <span className="text-xs text-muted-foreground">/ audit</span>
                 </div>
-                <p className="text-xs text-muted-foreground mb-5">{tier.desc}</p>
-                <ul className="space-y-2 mb-6 flex-1">
-                  {tier.features.map((feature, j) => (
-                    <li key={j} className="flex items-start gap-2 text-xs text-foreground/80">
-                      <Check className="w-3.5 h-3.5 text-emerald-500 mt-0.5 flex-shrink-0" />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
+                <p className="text-xs text-muted-foreground mb-5 flex-1">{tier.desc}</p>
                 <Button
                   variant={tier.popular ? "default" : "outline"}
                   className="w-full"
@@ -789,6 +804,78 @@ export default function Landing() {
                 </Button>
               </div>
             ))}
+          </div>
+
+          <div className="rounded-md border border-border/40 bg-card/20 overflow-x-auto" data-testid="pricing-comparison-table">
+            <table className="w-full min-w-[680px] text-xs">
+              <thead>
+                <tr className="border-b border-border/40 bg-background/40">
+                  <th className="text-left px-4 py-3 font-semibold">Included</th>
+                  {pricingTiers.map((tier) => (
+                    <th key={tier.name} className="text-center px-3 py-3 font-semibold">{tier.name}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  {
+                    label: "Automated instant scan preview",
+                    includes: [true, true, true, true],
+                  },
+                  {
+                    label: "Expert review session",
+                    includes: [false, true, true, true],
+                  },
+                  {
+                    label: "Detailed evidence + fix recommendations",
+                    includes: [false, false, true, true],
+                  },
+                  {
+                    label: "14-day prioritized roadmap",
+                    includes: [false, false, true, true],
+                  },
+                  {
+                    label: "Implementation PR support",
+                    includes: [false, false, false, true],
+                  },
+                ].map((row) => (
+                  <tr key={row.label} className="border-b border-border/30 last:border-b-0">
+                    <td className="px-4 py-3 text-foreground/90">{row.label}</td>
+                    {row.includes.map((enabled, idx) => (
+                      <td key={`${row.label}-${idx}`} className="px-3 py-3 text-center">
+                        {enabled ? (
+                          <Check className="w-4 h-4 text-emerald-500 mx-auto" />
+                        ) : (
+                          <span className="text-muted-foreground/50">—</span>
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <p className="text-center text-xs text-muted-foreground mt-4" data-testid="text-pricing-note">
+            All plans include instant preview + 14-day roadmap.
+          </p>
+
+          <div className="mt-8 rounded-md border border-border/40 bg-card/20 p-5" data-testid="pricing-faq">
+            <h3 className="text-sm font-semibold mb-3">Pricing FAQ</h3>
+            <div className="space-y-3 text-xs">
+              <div>
+                <p className="font-medium">Can I cancel?</p>
+                <p className="text-muted-foreground mt-1">Yes. You can cancel anytime before work begins for a full cancellation. If work has started, we scope any partial refund based on completed milestones.</p>
+              </div>
+              <div>
+                <p className="font-medium">What file size limits apply?</p>
+                <p className="text-muted-foreground mt-1">Scans currently support up to {SCAN_LIMITS.maxFilesToScan.toLocaleString()} files and {formatRepoSizeLimitMb()} repository size per submission.</p>
+              </div>
+              <div>
+                <p className="font-medium">What is your refund policy?</p>
+                <p className="text-muted-foreground mt-1">If we cannot deliver the agreed audit artifact, you receive a full refund. For completed deliverables, refunds are reviewed case-by-case within 7 days.</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
