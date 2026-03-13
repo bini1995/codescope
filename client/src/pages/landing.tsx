@@ -301,14 +301,36 @@ export default function Landing() {
     },
   ];
 
-  const trustTools = [
-    "Semgrep",
-    "Gitleaks",
-    "NPM Audit",
-    "ESLint",
-    "GitHub Actions",
-    "Pattern Analysis",
+  const poweredByTools = ["Semgrep", "Gitleaks", "ESLint"];
+
+  const testimonials = [
+    {
+      quote:
+        "We were two days from launching and CodeAudit flagged a tenant-isolation bug we had completely missed. It saved us from a painful first week.",
+      name: "Maya Chen",
+      role: "Founder, RelayDesk",
+    },
+    {
+      quote:
+        "The report was clear enough for our non-technical cofounder and detailed enough for engineering. We fixed the top 5 risks in one sprint.",
+      name: "Jordan Patel",
+      role: "CTO, PromptLayer Studio",
+    },
+    {
+      quote:
+        "We used CodeAudit ahead of investor diligence and it gave us concrete answers for architecture and security questions we were getting.",
+      name: "Ana Ribeiro",
+      role: "CEO, AtlasFlow AI",
+    },
+    {
+      quote:
+        "Fast turnaround, zero fluff. The remediation plan mapped directly to tickets and helped us ship fixes without derailing product momentum.",
+      name: "Ethan Brooks",
+      role: "Head of Product, LoomGrid",
+    },
   ];
+
+  const featuredIn = ["YC Startup School", "Founder Slack Security Circle", "Build in Public Weekly"];
 
   const competitorComparison = comparisonData?.comparison ?? [
     { name: "Semgrep", bestFor: "Continuous security scanning in engineering-heavy organizations." },
@@ -676,23 +698,53 @@ export default function Landing() {
                 </ul>
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Trusted Workflows Built On</h3>
-                <div className="flex flex-wrap gap-2">
-                  {trustTools.map((tool, i) => (
+                <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">As seen in</p>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {featuredIn.map((source, i) => (
                     <span
-                      key={i}
+                      key={source}
                       className="px-3 py-1.5 rounded-md border border-border/40 bg-background/50 text-xs text-muted-foreground font-medium"
-                      data-testid={`trust-tool-${i}`}
+                      data-testid={`featured-source-${i}`}
+                    >
+                      {source}
+                    </span>
+                  ))}
+                </div>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Powered By</h3>
+                <div className="flex flex-wrap gap-2">
+                  {poweredByTools.map((tool, i) => (
+                    <span
+                      key={tool}
+                      className="px-3 py-1.5 rounded-md border border-border/40 bg-background/50 text-xs text-muted-foreground font-medium"
+                      data-testid={`powered-by-tool-${i}`}
                     >
                       {tool}
                     </span>
                   ))}
                 </div>
-                <p className="text-xs text-muted-foreground/60 mt-3 italic">
-                  Powered by industry tools + human-level pattern analysis
-                </p>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="pb-16 px-4 sm:px-6" data-testid="section-testimonials">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-8">
+            <p className="text-xs uppercase tracking-wider text-primary/80 mb-2">Social proof</p>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-2">Trusted by early-stage teams shipping fast</h2>
+            <p className="text-sm text-muted-foreground">Feedback from founders and product teams using CodeAudit during launch prep.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {testimonials.map((item, i) => (
+              <div key={item.name} className="rounded-md border border-border/40 bg-card/20 p-5" data-testid={`testimonial-${i}`}>
+                <p className="text-sm text-foreground/90 leading-relaxed mb-4">“{item.quote}”</p>
+                <div>
+                  <p className="text-sm font-semibold">{item.name}</p>
+                  <p className="text-xs text-muted-foreground">{item.role}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -1304,50 +1356,61 @@ export default function Landing() {
         </div>
       </section>
 
-      <footer className="border-t border-border/30 py-10 px-4 sm:px-6 bg-card/20">
-        <div className="max-w-6xl mx-auto grid gap-8 md:grid-cols-[1.2fr_1fr_1fr_1fr]">
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-            <div className="w-5 h-5 rounded bg-primary flex items-center justify-center">
-              <Code2 className="w-3 h-3 text-primary-foreground" />
+      <footer className="border-t border-border/30 py-10 px-4 sm:px-6 bg-card/20" data-testid="footer-landing">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b border-border/30">
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded bg-primary flex items-center justify-center">
+                <Code2 className="w-3 h-3 text-primary-foreground" />
+              </div>
+              <span className="text-sm font-medium" data-testid="text-footer-logo">CodeAudit</span>
             </div>
-            <span className="text-sm font-medium" data-testid="text-footer-logo">CodeAudit</span>
+            <a
+              href="mailto:hello@codeauditapp.com"
+              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+              data-testid="footer-email"
+            >
+              hello@codeauditapp.com
+            </a>
           </div>
-            <p className="text-xs text-muted-foreground max-w-xs">Decision-ready technical risk intelligence for AI-built startups shipping under pressure.</p>
-            <div className="flex items-center gap-2 mt-4 text-muted-foreground">
-              <Twitter className="w-4 h-4" />
-              <Linkedin className="w-4 h-4" />
-              <Github className="w-4 h-4" />
+
+          <div className="pt-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <nav aria-label="Footer links">
+              <ul className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+                <li>
+                  <a href="/docs/privacy-policy" className="hover:text-primary transition-colors" data-testid="footer-link-privacy">
+                    Privacy Policy
+                  </a>
+                </li>
+                <li>
+                  <a href="/docs/terms" className="hover:text-primary transition-colors" data-testid="footer-link-terms">
+                    Terms
+                  </a>
+                </li>
+                <li>
+                  <a href="mailto:hello@codeauditapp.com" className="hover:text-primary transition-colors" data-testid="footer-link-contact">
+                    Contact
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://github.com/codeauditapp/codescope"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="hover:text-primary transition-colors"
+                    data-testid="footer-link-github"
+                  >
+                    GitHub
+                  </a>
+                </li>
+              </ul>
+            </nav>
+
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p>© {new Date().getFullYear()} CodeAudit</p>
+              <p>Made with ❤️ in Brooklyn</p>
             </div>
           </div>
-          <div>
-            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3">Product</p>
-            <ul className="space-y-2 text-sm">
-              <li><a href="#pricing" className="hover:text-primary transition-colors">Pricing</a></li>
-              <li><a href="#intake-form" className="hover:text-primary transition-colors">Get Decision Plan</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Sample Decision Memo</a></li>
-            </ul>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3">Resources</p>
-            <ul className="space-y-2 text-sm">
-              <li><a href="/docs/privacy-policy" className="hover:text-primary transition-colors">Privacy</a></li>
-              <li><a href="/docs/retention-policy" className="hover:text-primary transition-colors">Data Retention</a></li>
-              <li><a href="/docs/deploy-railway-neon" className="hover:text-primary transition-colors">Deployment Guide</a></li>
-            </ul>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3">Trust Signals</p>
-            <div className="space-y-2 text-xs text-muted-foreground">
-              <p>✓ Founder-friendly SLAs</p>
-              <p>✓ Human-reviewed findings</p>
-              <p>✓ Action-ready remediation roadmap</p>
-            </div>
-          </div>
-        </div>
-        <div className="max-w-6xl mx-auto mt-8 pt-6 border-t border-border/30 text-xs text-muted-foreground flex flex-col sm:flex-row justify-between gap-2">
-          <p>© {new Date().getFullYear()} CodeAudit. All rights reserved.</p>
-          <p>Built for teams who need to ship fast and safely.</p>
         </div>
       </footer>
     </div>
