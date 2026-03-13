@@ -252,6 +252,28 @@ function laneStatus(signalCount: number, scoreHint?: number): "strong" | "watch"
   return "strong";
 }
 
+function buildStartupStageBenchmark(audit: Audit, launchReadiness: number) {
+  const avgScore = Math.round(
+    ((audit.securityScore ?? 0) +
+      (audit.stabilityScore ?? 0) +
+      (audit.maintainabilityScore ?? 0) +
+      (audit.scalabilityScore ?? 0) +
+      (audit.cicdScore ?? 0)) / 5
+  );
+  const stage = avgScore >= 8 ? "top quartile" : avgScore >= 6 ? "mid pack" : "below peer baseline";
+  return {
+    stage,
+    benchmarkScore: avgScore,
+    launchReadiness,
+    summary:
+      avgScore >= 8
+        ? "Operating above similar-stage startup baseline; keep momentum with preventive controls."
+        : avgScore >= 6
+        ? "Near similar-stage startup baseline; focused remediation can move you into top quartile quickly."
+        : "Below similar-stage startup baseline; resolving top blockers is likely required before launch or diligence.",
+  };
+}
+
 function buildFounderSingleAnswer(audit: Audit, findings: Finding[], launchReadiness: number) {
   const lanes: CrossFunctionalLane[] = [
     {
@@ -581,6 +603,7 @@ export function buildAuditBusinessAssets(audit: Audit, findings: Finding[]) {
 
   const enterpriseProspectRejector = buildEnterpriseProspectRejector(findings);
   const founderSingleAnswer = buildFounderSingleAnswer(audit, findings, launchReadiness);
+  const startupStageBenchmark = buildStartupStageBenchmark(audit, launchReadiness);
 
   return {
     framework: {
@@ -602,6 +625,7 @@ export function buildAuditBusinessAssets(audit: Audit, findings: Finding[]) {
       preSalesTechnicalTrustReport,
       enterpriseProspectRejector,
       founderSingleAnswer,
+      startupStageBenchmark,
     },
     generatedAt: new Date().toISOString(),
   };

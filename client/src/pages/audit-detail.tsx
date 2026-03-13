@@ -235,7 +235,7 @@ export default function AuditDetail() {
     },
   });
 
-  const { data: findings, isLoading: findingsLoading } = useQuery<Finding[]>({
+  const { data: findings, isLoading: findingsLoading } = useQuery<Array<Finding & { whyItMatters?: string }>>({
     queryKey: ["/api/audits", auditId, "findings"],
     enabled: !!auditId,
     refetchInterval: () => {
@@ -247,6 +247,7 @@ export default function AuditDetail() {
     artifacts?: {
       enterpriseProspectRejector?: EnterpriseProspectRejector;
       founderSingleAnswer?: FounderSingleAnswer;
+      startupStageBenchmark?: { stage: string; benchmarkScore: number; summary: string };
     };
   }>({
     queryKey: ["/api/audits", auditId, "business-assets"],
@@ -364,6 +365,9 @@ export default function AuditDetail() {
 
   const enterpriseRejector = businessAssets?.artifacts?.enterpriseProspectRejector;
   const founderSingleAnswer = businessAssets?.artifacts?.founderSingleAnswer;
+  const startupBenchmark = businessAssets?.artifacts?.startupStageBenchmark as
+    | { stage: string; benchmarkScore: number; summary: string }
+    | undefined;
 
   const ticketDrafts: TicketDraft[] = quickestHighReduction.map((finding) => ({
     finding,
@@ -605,6 +609,16 @@ ${ticket.acceptanceCriteria.map((item) => `    - ${item}`).join("\n")}`
               <h2 className="font-semibold text-sm mb-2">What breaks in 90 days if unchanged</h2>
               <p className="text-sm text-muted-foreground leading-relaxed">{ninetyDayOutlook}</p>
             </div>
+            {startupBenchmark && (
+              <div className="rounded-md border border-border/40 bg-card/30 p-4 md:col-span-2" data-testid="section-startup-benchmark">
+                <h2 className="font-semibold text-sm mb-2">Benchmark vs similar-stage startups</h2>
+                <p className="text-sm text-muted-foreground mb-1">
+                  Position: <span className="text-foreground font-medium">{startupBenchmark.stage}</span> • Score {startupBenchmark.benchmarkScore}/10
+                </p>
+                <p className="text-xs text-muted-foreground">{startupBenchmark.summary}</p>
+              </div>
+            )}
+
             {founderSingleAnswer && (
               <div
                 className="rounded-md border border-primary/30 bg-primary/5 p-4 md:col-span-2"

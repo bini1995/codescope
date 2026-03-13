@@ -49,6 +49,40 @@ function generateOauthState(): string {
   return randomBytes(32).toString("hex");
 }
 
+
+function parseGitHubRepo(url: string): { owner: string; repo: string } | null {
+  const normalized = url.trim().replace(/\.git$/, "");
+  const match = normalized.match(/^https?:\/\/github\.com\/([^\/]+)\/([^\/]+)$/i);
+  if (!match) return null;
+  return { owner: match[1], repo: match[2] };
+}
+
+function repoBusinessContextByStars(stars: number): string {
+  if (stars >= 500) return "visible traction; unresolved risk can impact broader customer trust quickly";
+  if (stars >= 50) return "early-market traction; production incidents can slow conversion and inbound deals";
+  return "early-stage build; reliability and security debt can block launch velocity and first revenue";
+}
+
+const marketingComparison = [
+  { name: "Semgrep", bestFor: "Continuous security scanning in engineering-heavy organizations." },
+  { name: "Snyk", bestFor: "Broad security platform for code, open source, containers, and IaC in one commercial product." },
+  { name: "SonarQube Cloud", bestFor: "Ongoing quality gates and code verification embedded in CI." },
+  { name: "CodeRabbit", bestFor: "PR-time AI code review workflows and inline feedback." },
+  { name: "CodeScope", bestFor: "Founder-led and lean teams that need business-context prioritization before launch, diligence, or sale." },
+];
+
+const sampleReportGallery = [
+  { title: "Pre-launch blocker map", focus: "What to fix in the next 14 days before first customer onboarding." },
+  { title: "Diligence readiness memo", focus: "Investor/buyer-ready technical risk summary with mitigation confidence." },
+  { title: "Post-agency stabilization brief", focus: "Hidden architecture debt from outsourced or AI-assisted delivery with remediation order." },
+];
+
+const auditTypesByUseCase = [
+  { key: "pre_launch", label: "Pre-launch", outcome: "Ship without avoidable outages, auth gaps, or trust-breaking defects." },
+  { key: "diligence", label: "Diligence", outcome: "Answer investor or enterprise security review questions with evidence." },
+  { key: "post_agency", label: "Post-agency handoff", outcome: "Regain engineering control after freelancer/agency delivery." },
+  { key: "cleanup", label: "AI-MVP cleanup", outcome: "Stabilize AI-generated code paths and prioritize high-ROI fixes." },
+];
 function canUseSharedGitHubConnector(): boolean {
   if (process.env.ALLOW_SHARED_GITHUB_CONNECTOR === "1") return true;
   return process.env.NODE_ENV !== "production";
@@ -210,6 +244,47 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  app.get("/api/marketing/comparison", (_req, res) => {
+    res.json({ comparison: marketingComparison });
+  });
+
+  app.get("/api/marketing/sample-reports", (_req, res) => {
+    res.json({ reports: sampleReportGallery });
+  });
+
+  app.get("/api/marketing/audit-types", (_req, res) => {
+    res.json({ auditTypes: auditTypesByUseCase });
+  });
+
+  app.post("/api/marketing/repo-check", async (req, res) => {
+    const repoUrl = typeof req.body?.repoUrl === "string" ? req.body.repoUrl : "";
+    const parsed = parseGitHubRepo(repoUrl);
+    if (!parsed) {
+      return res.status(400).json({ message: "Provide a valid GitHub repository URL" });
+    }
+
+    try {
+      const response = await fetch(`https://api.github.com/repos/${parsed.owner}/${parsed.repo}`, {
+        headers: { Accept: "application/vnd.github+json", "User-Agent": "codescope-marketing-check" },
+      });
+      if (!response.ok) {
+        return res.status(response.status === 404 ? 404 : 502).json({ message: "Unable to fetch repository metadata" });
+      }
+      const repo = await response.json();
+      return res.json({
+        fullName: repo.full_name,
+        stars: repo.stargazers_count,
+        forks: repo.forks_count,
+        language: repo.language,
+        openIssues: repo.open_issues_count,
+        defaultBranch: repo.default_branch,
+        businessContext: repoBusinessContextByStars(repo.stargazers_count || 0),
+      });
+    } catch {
+      return res.status(502).json({ message: "Failed to contact GitHub" });
+    }
+  });
+
   app.get("/api/audits", requireAuth, async (req, res) => {
     const audits = await storage.getAudits(req.auth!.sub);
     const sanitized = audits.map((a) => ({
@@ -237,15 +312,22 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     if (!audit) return res.status(404).json({ message: "Audit not found" });
     const findings = await storage.getFindingsByAudit(String(req.params.id), req.auth!.sub);
     const isPaid = !!audit.paidAt;
+    const withContext = findings.map((f) => ({
+      ...f,
+      whyItMatters:
+        f.severity === "critical" || f.severity === "high"
+          ? "High confidence revenue and customer trust risk if unresolved before launch."
+          : "Left unaddressed, this can accumulate into delivery drag and customer confidence erosion.",
+    }));
     if (!isPaid) {
-      const gated = findings.map((f) => ({
+      const gated = withContext.map((f) => ({
         ...f,
         fixSteps: "Unlock this audit to see fix steps",
         codeSnippet: null,
       }));
       return res.json(gated);
     }
-    res.json(findings);
+    res.json(withContext);
   });
 
 
