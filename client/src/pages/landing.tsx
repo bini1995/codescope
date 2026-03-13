@@ -178,6 +178,28 @@ export default function Landing() {
     "Companies inheriting code after agency or freelancer delivery",
   ];
 
+  const notForList = [
+    "Teams expecting a one-click scan to replace security ownership",
+    "Companies wanting a compliance certificate without remediation work",
+    "Projects that cannot share any repository access under any model",
+  ];
+
+  const whatWeCheck = [
+    "Authentication, authorization, and tenant boundary failures",
+    "Secret leaks, unsafe file handling, and data exposure paths",
+    "Dependency and supply-chain risk in packages and build workflows",
+    "CI/CD and deployment guardrails (tests, branch controls, rollback safety)",
+    "Scalability and abuse paths: rate limits, queueing, and hot spots",
+    "Code quality drift from AI-assisted implementation patterns",
+  ];
+
+  const deliveryArtifacts = [
+    "Executive launch-risk summary (for founders and leadership)",
+    "Technical findings with file-level evidence and severity",
+    "Prioritized remediation plan with immediate next actions",
+    "Issue list export suitable for Jira/Linear handoff",
+  ];
+
   const urgencyOffers = [
     {
       title: "Pre-launch readiness audit",
@@ -274,17 +296,31 @@ export default function Landing() {
 
   const pricingTiers = [
     {
-      name: "Quick Triage",
+      name: "Instant Signal",
+      price: "$99",
+      desc: "Fast scanner-backed launch signal that creates immediate remediation urgency",
+      features: [
+        "Automated scan snapshot in hours, not days",
+        "Top launch blockers preview (counts + category)",
+        "Clear upgrade trigger: unlock exact file-level remediation plan",
+        "Best entry point before investing in expert review",
+        'Example output: "4 launch blockers, 11 medium-risk issues, weak auth boundaries"',
+      ],
+      cta: "Start $99 Signal",
+      popular: false,
+    },
+    {
+      name: "Guided Review",
       price: "$499",
-      desc: "45–60 minute expert triage with top risks and immediate actions",
+      desc: "Expert-guided review that turns signal into a concrete fix sequence",
       features: [
         "45–60 minute expert review session",
-        "Top 10 launch blockers mapped by business impact",
-        "Short walkthrough call + what-to-do-first plan",
+        "Top launch blockers mapped to business and engineering impact",
+        "Short walkthrough call + prioritized what-to-do-first plan",
         "Fast summary delivered within 24 hours",
-        "Best for founders needing fast decision support",
+        "Best for teams deciding whether to escalate to full audit",
       ],
-      cta: "Book $499 Triage",
+      cta: "Book $499 Review",
       popular: false,
     },
     {
@@ -302,9 +338,9 @@ export default function Landing() {
       popular: true,
     },
     {
-      name: "Fix Sprint",
-      price: "$3,000",
-      desc: "Hands-on implementation sprint where we ship PRs for your top issues",
+      name: "Remediation Sprint",
+      price: "$3,000–$5,000",
+      desc: "Hands-on implementation sprint where we ship fixes for your highest-risk issues",
       features: [
         "Everything in Full Audit",
         "Implementation of highest-priority fixes",
@@ -312,7 +348,7 @@ export default function Landing() {
         "Before/after engineering maturity scorecard",
         "Ideal when your team needs execution, not just advice",
       ],
-      cta: "Start $3,000 Sprint",
+      cta: "Start Remediation Sprint",
       popular: false,
     },
   ];
@@ -557,13 +593,52 @@ export default function Landing() {
         </div>
       </section>
 
+      <section className="pb-14 px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="rounded-md border border-border/40 bg-card/20 p-5" data-testid="card-what-we-check">
+            <h3 className="text-base font-semibold mb-2">What we check</h3>
+            <ul className="space-y-2 text-xs text-muted-foreground">
+              {whatWeCheck.map((item) => (
+                <li key={item} className="flex items-start gap-2">
+                  <Check className="w-3.5 h-3.5 text-emerald-500 mt-0.5 flex-shrink-0" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="rounded-md border border-border/40 bg-card/20 p-5" data-testid="card-deliverables">
+            <h3 className="text-base font-semibold mb-2">Exact deliverables</h3>
+            <ul className="space-y-2 text-xs text-muted-foreground">
+              {deliveryArtifacts.map((item) => (
+                <li key={item} className="flex items-start gap-2">
+                  <Check className="w-3.5 h-3.5 text-emerald-500 mt-0.5 flex-shrink-0" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+
       <section className="pb-16 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto">
           <div className="rounded-md border border-border/40 bg-card/20 p-6">
-            <h3 className="text-lg font-semibold mb-2" data-testid="text-preview-title">Instant Risk Preview (included before expert upgrade)</h3>
+            <h3 className="text-lg font-semibold mb-2" data-testid="text-preview-title">Instant scan vs expert audit</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Every engagement starts with fast signal, then evolves into decision-grade outputs your team can execute.
+              Start with low-friction signal, then move to expert-led remediation when the risk is real.
             </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+              <div className="rounded border border-border/40 bg-background/50 p-3" data-testid="instant-scan-breakdown">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">$99 Instant Scan</p>
+                <p className="text-xs text-foreground/80 mb-2">Automated urgency signal with issue counts and risk themes.</p>
+                <p className="text-[11px] text-muted-foreground">Turnaround: typically same day.</p>
+              </div>
+              <div className="rounded border border-border/40 bg-background/50 p-3" data-testid="expert-audit-breakdown">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">$499+ Expert Audit</p>
+                <p className="text-xs text-foreground/80 mb-2">Human review with exact evidence, sequencing, and fix plan.</p>
+                <p className="text-[11px] text-muted-foreground">Turnaround: 24–48h for guided review, deeper for full audit.</p>
+              </div>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
               {[
                 "Repository metadata snapshot",
@@ -706,6 +781,27 @@ export default function Landing() {
         </div>
       </section>
 
+      <section className="pb-12 px-4 sm:px-6">
+        <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="rounded-md border border-border/40 bg-card/20 p-4" data-testid="who-its-for">
+            <h3 className="text-sm font-semibold mb-2">Who this is for</h3>
+            <ul className="space-y-1.5 text-xs text-muted-foreground">
+              {audienceList.slice(0, 4).map((item) => (
+                <li key={item}>• {item}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="rounded-md border border-border/40 bg-card/20 p-4" data-testid="who-its-not-for">
+            <h3 className="text-sm font-semibold mb-2">Who this is not for</h3>
+            <ul className="space-y-1.5 text-xs text-muted-foreground">
+              {notForList.map((item) => (
+                <li key={item}>• {item}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+
       <section className="pb-14 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto">
           <h3 className="text-lg font-semibold text-center mb-2" data-testid="text-urgency-offers-title">Start with the fastest urgent offers</h3>
@@ -765,6 +861,29 @@ export default function Landing() {
                 <p className="text-xs text-muted-foreground leading-relaxed">{artifact.detail}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="pb-12 px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="rounded-md border border-border/40 bg-card/20 p-5" data-testid="privacy-promise">
+            <h3 className="text-base font-semibold mb-2">Data handling & privacy promise</h3>
+            <ul className="space-y-2 text-xs text-muted-foreground">
+              <li>• Private repositories are processed only for the agreed audit scope.</li>
+              <li>• Access is limited to audit workflows and removed after engagement handoff.</li>
+              <li>• Findings are shared only with approved contacts on your project.</li>
+              <li>• We can work from temporary access tokens and least-privilege settings.</li>
+            </ul>
+          </div>
+          <div className="rounded-md border border-primary/30 bg-primary/5 p-5" data-testid="vs-scanners">
+            <h3 className="text-base font-semibold mb-2">Why not just Snyk/Sonar/PR bots?</h3>
+            <ul className="space-y-2 text-xs text-muted-foreground">
+              <li>• Scanners surface alerts. We connect findings to launch and revenue risk.</li>
+              <li>• Bots comment per line. We provide cross-system root cause and fix sequencing.</li>
+              <li>• Commodity tools are noisy. We focus on what blocks launch confidence first.</li>
+              <li>• You leave with an implementation-ready plan, not just a dashboard score.</li>
+            </ul>
           </div>
         </div>
       </section>
