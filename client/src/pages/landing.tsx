@@ -4,11 +4,20 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  NavigationMenu,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  navigationMenuTriggerStyle,
+} from "@/components/ui/navigation-menu";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { SCAN_LIMITS, formatRepoSizeLimitMb } from "@shared/scan-limits";
 import { trackCtaClick } from "@/lib/analytics";
+import { cn } from "@/lib/utils";
 import {
   Shield,
   Zap,
@@ -36,6 +45,7 @@ import {
   Linkedin,
   Twitter,
   Github,
+  Menu,
 } from "lucide-react";
 
 type GHRepo = {
@@ -52,6 +62,14 @@ type GHRepo = {
 type MarketingComparison = { name: string; bestFor: string };
 type SampleReport = { title: string; focus: string };
 type AuditType = { key: string; label: string; outcome: string };
+
+const STRIPE_PAYMENT_LINKS = {
+  instantSignal: "https://buy.stripe.com/8x28wQ3N87f0bQIfYY",
+  guidedReview: "https://buy.stripe.com/cNi7sM8bseDsaME4gg",
+  fullAudit: "https://buy.stripe.com/9AQ3co6Zo9ng4kocMN",
+  remediationSprint: "https://buy.stripe.com/4gw4gsfFYfHw8wA5kl",
+} as const;
+
 export default function Landing() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -149,6 +167,41 @@ export default function Landing() {
 
     setShowRepos((prev) => !prev);
   };
+
+  const scrollToSection = (sectionId: string) => {
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const navItems: Array<{ label: string; onClick: () => void; testId: string }> = [
+    {
+      label: "How It Works",
+      onClick: () => handleCtaClick("How It Works", "top_nav", () => scrollToSection("how-it-works")),
+      testId: "link-how-it-works",
+    },
+    {
+      label: "Pricing",
+      onClick: () => handleCtaClick("Pricing", "top_nav", () => scrollToSection("pricing")),
+      testId: "link-pricing",
+    },
+    {
+      label: "Sample Report",
+      onClick: () => handleCtaClick("Sample Report", "top_nav", () => scrollToSection("sample-report")),
+      testId: "link-sample-report",
+    },
+    {
+      label: "Blog",
+      onClick: () =>
+        handleCtaClick("Blog", "top_nav", () => {
+          toast({ title: "Blog coming soon", description: "We’re publishing technical breakdowns soon." });
+        }),
+      testId: "link-blog",
+    },
+    {
+      label: "Login",
+      onClick: () => handleCtaClick("Login", "top_nav", () => navigate("/dashboard")),
+      testId: "link-login",
+    },
+  ];
 
   const valueBlocks = [
     {
@@ -376,6 +429,7 @@ export default function Landing() {
       ],
       cta: "Start $99 Signal",
       popular: false,
+      paymentLink: STRIPE_PAYMENT_LINKS.instantSignal,
     },
     {
       name: "Guided Review",
@@ -390,6 +444,7 @@ export default function Landing() {
       ],
       cta: "Book $499 Review",
       popular: false,
+      paymentLink: STRIPE_PAYMENT_LINKS.guidedReview,
     },
     {
       name: "Full Audit",
@@ -404,6 +459,7 @@ export default function Landing() {
       ],
       cta: "Book $1,500 Audit",
       popular: true,
+      paymentLink: STRIPE_PAYMENT_LINKS.fullAudit,
     },
     {
       name: "Remediation Sprint",
@@ -418,12 +474,13 @@ export default function Landing() {
       ],
       cta: "Start Remediation Sprint",
       popular: false,
+      paymentLink: STRIPE_PAYMENT_LINKS.remediationSprint,
     },
   ];
 
   return (
     <div className="min-h-screen bg-background">
-      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl">
+      <nav className="sticky top-0 left-0 right-0 z-50 border-b border-border/40 bg-background/90 backdrop-blur-xl">
         <div className="max-w-6xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
@@ -433,54 +490,54 @@ export default function Landing() {
               CodeAudit
             </span>
           </div>
-          <div className="flex items-center gap-1 sm:gap-2 min-w-0 overflow-x-auto">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                handleCtaClick("Pricing", "top_nav", () =>
-                  document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })
-                )
-              }
-              data-testid="link-pricing"
-              className="text-xs sm:text-sm shrink-0"
-            >
-              Pricing
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleCtaClick("Dashboard", "top_nav", () => navigate("/dashboard"))}
-              data-testid="link-dashboard"
-              className="text-xs sm:text-sm shrink-0"
-            >
-              Dashboard
-            </Button>
-            {user && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleCtaClick("Sign out", "top_nav", () => signOut())}
-                data-testid="button-signout"
-                className="text-xs sm:text-sm shrink-0"
-              >
-                Sign out
+          <NavigationMenu className="hidden md:flex">
+            <NavigationMenuList>
+              {navItems.map((item) => (
+                <NavigationMenuItem key={item.label}>
+                  <NavigationMenuLink
+                    className={cn(navigationMenuTriggerStyle(), "cursor-pointer")}
+                    onClick={item.onClick}
+                    data-testid={item.testId}
+                  >
+                    {item.label}
+                  </NavigationMenuLink>
+                </NavigationMenuItem>
+              ))}
+            </NavigationMenuList>
+          </NavigationMenu>
+
+          <Sheet>
+            <SheetTrigger asChild className="md:hidden">
+              <Button size="icon" variant="ghost" aria-label="Open navigation menu">
+                <Menu className="h-5 w-5" />
               </Button>
-            )}
-            <Button
-              size="sm"
-              onClick={() =>
-                handleCtaClick("Get Audit", "top_nav", () =>
-                  document.getElementById("intake-form")?.scrollIntoView({ behavior: "smooth" })
-                )
-              }
-              data-testid="button-get-audit"
-              className="shrink-0"
-            >
-              Get Audit
-              <ArrowRight className="w-3.5 h-3.5 ml-1" />
-            </Button>
-          </div>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[280px]">
+              <div className="pt-8 flex flex-col gap-2">
+                {navItems.map((item) => (
+                  <Button
+                    key={item.label}
+                    variant="ghost"
+                    className="justify-start"
+                    onClick={item.onClick}
+                    data-testid={`mobile-${item.testId}`}
+                  >
+                    {item.label}
+                  </Button>
+                ))}
+                {user && (
+                  <Button
+                    variant="ghost"
+                    className="justify-start"
+                    onClick={() => handleCtaClick("Sign out", "top_nav_mobile", () => signOut())}
+                    data-testid="mobile-button-signout"
+                  >
+                    Sign out
+                  </Button>
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </nav>
 
@@ -544,47 +601,36 @@ export default function Landing() {
             into launch risk, revenue risk, and operational risk.
           </p>
 
-          <p className="text-sm text-muted-foreground/70 mb-8">
+          <p className="text-sm text-muted-foreground/70 mb-2">
             Don’t buy a list of issues. Buy clarity on what to do next.
           </p>
 
+          <p className="text-sm text-amber-300 mb-8" data-testid="text-hero-offer-line">
+            First 10 customers: $99 Instant Signal (normally $499) • Delivered in &lt;24h
+          </p>
+
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-7">
-            <Button
-              size="lg"
-              onClick={() =>
-                handleCtaClick("Start Your Audit", "hero", () =>
-                  document.getElementById("intake-form")?.scrollIntoView({ behavior: "smooth" })
-                )
-              }
-              data-testid="button-start-audit"
-            >
-              Start Your Audit
-              <ArrowRight className="w-4 h-4 ml-1.5" />
+            <Button size="lg" asChild data-testid="button-start-audit">
+              <a
+                href={STRIPE_PAYMENT_LINKS.instantSignal}
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => handleCtaClick("Start $99 Signal", "hero")}
+              >
+                Start $99 Signal
+                <ArrowRight className="w-4 h-4 ml-1.5" />
+              </a>
             </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={() =>
-                handleCtaClick("See Pricing", "hero", () =>
-                  document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })
-                )
-              }
-              data-testid="button-see-pricing"
-            >
-              See Pricing
-              <ChevronRight className="w-4 h-4 ml-1" />
-            </Button>
-            <Button
-              variant="secondary"
-              size="lg"
-              onClick={() =>
-                handleCtaClick("Upload Repo for Instant Preview", "hero", () =>
-                  document.getElementById("intake-form")?.scrollIntoView({ behavior: "smooth" })
-                )
-              }
-              data-testid="button-upload-preview"
-            >
-              Upload Repo for Instant Preview
+            <Button variant="outline" size="lg" asChild data-testid="button-guided-review">
+              <a
+                href={STRIPE_PAYMENT_LINKS.guidedReview}
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => handleCtaClick("Book $499 Review", "hero")}
+              >
+                Book $499 Review
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </a>
             </Button>
           </div>
 
@@ -638,7 +684,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="pb-20 px-4 sm:px-6">
+      <section id="how-it-works" className="pb-20 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-bold mb-3" data-testid="text-value-title">
@@ -727,7 +773,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="pb-20 px-4 sm:px-6">
+      <section id="how-it-works" className="pb-20 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-10">
             <h2 className="text-2xl sm:text-3xl font-bold mb-3" data-testid="text-how-title">
@@ -1033,15 +1079,18 @@ export default function Landing() {
                 <Button
                   variant={tier.popular ? "default" : "outline"}
                   className="w-full"
-                  onClick={() =>
-                    handleCtaClick("Upload Repo for Instant Preview", "hero", () =>
-                      document.getElementById("intake-form")?.scrollIntoView({ behavior: "smooth" })
-                    )
-                  }
+                  asChild
                   data-testid={`button-pricing-${tier.name.toLowerCase()}`}
                 >
-                  {tier.cta}
-                  <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                  <a
+                    href={tier.paymentLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={() => handleCtaClick(tier.cta, "pricing")}
+                  >
+                    {tier.cta}
+                    <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                  </a>
                 </Button>
               </div>
             ))}
@@ -1141,7 +1190,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="pb-12 px-4 sm:px-6">
+      <section id="sample-report" className="pb-12 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto space-y-4">
           <div
             className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-4"
