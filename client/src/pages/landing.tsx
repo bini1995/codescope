@@ -59,6 +59,16 @@ type GHRepo = {
   updatedAt: string;
 };
 
+type RepoCheckPreview = {
+  fullName: string;
+  stars: number;
+  forks: number;
+  language: string | null;
+  openIssues: number;
+  defaultBranch: string;
+  businessContext: string;
+};
+
 type MarketingComparison = { name: string; bestFor: string };
 type SampleReport = { title: string; focus: string };
 type AuditType = { key: string; label: string; outcome: string };
@@ -86,6 +96,7 @@ export default function Landing() {
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
   const [authForm, setAuthForm] = useState({ fullName: "", email: "", password: "" });
   const [showSampleReport, setShowSampleReport] = useState(false);
+  const [previewRepoUrl, setPreviewRepoUrl] = useState("");
 
   const { data: repos } = useQuery<GHRepo[]>({
     queryKey: ["/api/github/repos"],
@@ -123,6 +134,19 @@ export default function Landing() {
     },
     onError: (err: Error) => {
       toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const repoPreviewMutation = useMutation({
+    mutationFn: async (repoUrl: string) => {
+      const response = await apiRequest("POST", "/api/marketing/repo-check", { repoUrl });
+      return (await response.json()) as RepoCheckPreview;
+    },
+    onError: () => {
+      toast({
+        title: "Preview queued",
+        description: "We’ll email your preview in 2 hours while we verify repository access.",
+      });
     },
   });
 
@@ -166,6 +190,17 @@ export default function Landing() {
     }
 
     setShowRepos((prev) => !prev);
+  };
+
+  const handleInstantPreview = () => {
+    if (!previewRepoUrl.trim()) {
+      toast({ title: "Repo URL required", description: "Paste a GitHub repo URL to run the preview." });
+      return;
+    }
+
+    handleCtaClick("Try Instant Preview", "hero_preview", () => {
+      repoPreviewMutation.mutate(previewRepoUrl.trim());
+    });
   };
 
   const scrollToSection = (sectionId: string) => {
@@ -370,27 +405,21 @@ export default function Landing() {
   const testimonials = [
     {
       quote:
-        "We were two days from launching and CodeAudit flagged a tenant-isolation bug we had completely missed. It saved us from a painful first week.",
-      name: "Maya Chen",
-      role: "Founder, RelayDesk",
+        "Found 7 launch blockers in 45 minutes — saved us from a bad launch.",
+      name: "Beta Founder A",
+      role: "Founder, AI fintech startup",
     },
     {
       quote:
-        "The report was clear enough for our non-technical cofounder and detailed enough for engineering. We fixed the top 5 risks in one sprint.",
-      name: "Jordan Patel",
-      role: "CTO, PromptLayer Studio",
+        "The prioritized fix plan turned a chaotic codebase into a clear two-week execution sprint.",
+      name: "Beta Founder B",
+      role: "CEO, AI healthcare startup",
     },
     {
       quote:
-        "We used CodeAudit ahead of investor diligence and it gave us concrete answers for architecture and security questions we were getting.",
-      name: "Ana Ribeiro",
-      role: "CEO, AtlasFlow AI",
-    },
-    {
-      quote:
-        "Fast turnaround, zero fluff. The remediation plan mapped directly to tickets and helped us ship fixes without derailing product momentum.",
-      name: "Ethan Brooks",
-      role: "Head of Product, LoomGrid",
+        "We caught auth and secrets issues before customer rollout, and our team fixed them the same week.",
+      name: "Beta Engineering Lead",
+      role: "CTO, AI workflow startup",
     },
   ];
 
@@ -443,7 +472,7 @@ export default function Landing() {
         "Best for teams deciding whether to escalate to full audit",
       ],
       cta: "Book $499 Review",
-      popular: false,
+      popular: true,
       paymentLink: STRIPE_PAYMENT_LINKS.guidedReview,
     },
     {
@@ -458,7 +487,7 @@ export default function Landing() {
         "Buyer/investor-ready technical risk memo",
       ],
       cta: "Book $1,500 Audit",
-      popular: true,
+      popular: false,
       paymentLink: STRIPE_PAYMENT_LINKS.fullAudit,
     },
     {
@@ -652,15 +681,49 @@ export default function Landing() {
           </div>
 
           <div className="mx-auto mb-12 max-w-2xl rounded-md border border-cyan-500/30 bg-slate-950/60 p-4 text-left shadow-[0_0_40px_rgba(14,116,144,0.2)]">
-            <p className="mb-2 text-[11px] uppercase tracking-[0.2em] text-cyan-300/80">
-              Instant Upload Preview
-            </p>
-            <div className="space-y-1.5 font-mono text-xs text-cyan-100/80">
-              <p>$ upload repo github.com/acme/ai-assistant</p>
-              <p className="text-cyan-200">✓ Secret scan initialized</p>
-              <p className="text-cyan-200">✓ Dependency risk graph generated</p>
-              <p className="text-amber-200">! 4 critical findings surfaced in preview</p>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-cyan-300/80">Try Instant Preview</p>
+              <Sparkles className="h-4 w-4 text-cyan-300/80" />
             </div>
+
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row">
+              <Input
+                value={previewRepoUrl}
+                onChange={(event) => setPreviewRepoUrl(event.target.value)}
+                placeholder="https://github.com/your-org/your-repo"
+                className="border-cyan-400/30 bg-slate-950/70 text-cyan-100 placeholder:text-cyan-100/40"
+                data-testid="input-instant-preview-repo"
+              />
+              <Button
+                type="button"
+                onClick={handleInstantPreview}
+                disabled={repoPreviewMutation.isPending}
+                className="sm:w-auto"
+                data-testid="button-instant-preview-submit"
+              >
+                {repoPreviewMutation.isPending ? "Checking..." : "Run Preview"}
+              </Button>
+            </div>
+
+            {repoPreviewMutation.data ? (
+              <div className="space-y-1.5 font-mono text-xs text-cyan-100/80" data-testid="instant-preview-result">
+                <p>$ scan {repoPreviewMutation.data.fullName}</p>
+                <p className="text-cyan-200">
+                  ✓ {repoPreviewMutation.data.language || "Mixed"} codebase • {repoPreviewMutation.data.defaultBranch} branch
+                </p>
+                <p className="text-cyan-200">
+                  ✓ {repoPreviewMutation.data.stars.toLocaleString()} stars • {repoPreviewMutation.data.forks.toLocaleString()} forks
+                </p>
+                <p className="text-amber-200">! {repoPreviewMutation.data.businessContext}</p>
+              </div>
+            ) : (
+              <div className="space-y-1.5 font-mono text-xs text-cyan-100/80" data-testid="instant-preview-placeholder">
+                <p>$ upload repo github.com/acme/ai-assistant</p>
+                <p className="text-cyan-200">✓ Secret scan initialized</p>
+                <p className="text-cyan-200">✓ Dependency risk graph generated</p>
+                <p className="text-amber-200">! We’ll email you the preview in 2 hours if live fetch is unavailable</p>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground/60 flex-wrap">
@@ -1123,14 +1186,18 @@ export default function Landing() {
                   },
                   {
                     label: "Detailed evidence + fix recommendations",
-                    includes: [false, false, true, true],
+                    includes: [false, true, true, true],
                   },
                   {
                     label: "14-day prioritized roadmap",
+                    includes: [false, true, true, true],
+                  },
+                  {
+                    label: "Buyer/investor-ready technical risk memo",
                     includes: [false, false, true, true],
                   },
                   {
-                    label: "Implementation PR support",
+                    label: "Implementation pull requests",
                     includes: [false, false, false, true],
                   },
                 ].map((row) => (
@@ -1155,7 +1222,7 @@ export default function Landing() {
             className="text-center text-xs text-muted-foreground mt-4"
             data-testid="text-pricing-note"
           >
-            All plans include instant preview + 14-day roadmap.
+            14-day money-back on all plans.
           </p>
 
           <div
@@ -1182,7 +1249,7 @@ export default function Landing() {
                 <p className="font-medium">What is your refund policy?</p>
                 <p className="text-muted-foreground mt-1">
                   If we cannot deliver the agreed audit artifact, you receive a full refund. For
-                  completed deliverables, refunds are reviewed case-by-case within 7 days.
+                  completed deliverables, refunds are reviewed case-by-case within 14 days.
                 </p>
               </div>
             </div>
@@ -1808,7 +1875,9 @@ export default function Landing() {
               <ul className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
                 <li>
                   <a
-                    href="/docs/privacy-policy"
+                    href="https://github.com/codeauditapp/codescope/blob/main/docs/privacy-policy.md"
+                    target="_blank"
+                    rel="noreferrer"
                     className="hover:text-primary transition-colors"
                     data-testid="footer-link-privacy"
                   >
