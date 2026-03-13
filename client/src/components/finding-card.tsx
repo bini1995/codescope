@@ -5,7 +5,7 @@ import { CATEGORY_CONFIG, EFFORT_CONFIG } from "@/lib/constants";
 import type { Finding } from "@shared/schema";
 
 interface FindingCardProps {
-  finding: Finding;
+  finding: Finding & { whyItMatters?: string };
   index: number;
   isPaid?: boolean;
 }
@@ -118,6 +118,15 @@ export function FindingCard({ finding, index, isPaid = true }: FindingCardProps)
             </h5>
             <p className="text-sm text-foreground/80 leading-relaxed">{finding.businessImpact}</p>
           </div>
+
+          {finding.whyItMatters && (
+            <div>
+              <h5 className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5 font-medium">
+                Why this matters to revenue & trust
+              </h5>
+              <p className="text-sm text-foreground/80 leading-relaxed">{finding.whyItMatters}</p>
+            </div>
+          )}
 
           {isPaid ? (
             <div>

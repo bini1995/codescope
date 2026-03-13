@@ -50,6 +50,10 @@ type GHRepo = {
   updatedAt: string;
 };
 
+
+type MarketingComparison = { name: string; bestFor: string };
+type SampleReport = { title: string; focus: string };
+type AuditType = { key: string; label: string; outcome: string };
 export default function Landing() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -70,6 +74,16 @@ export default function Landing() {
   const { data: repos } = useQuery<GHRepo[]>({
     queryKey: ["/api/github/repos"],
     enabled: !!user,
+  });
+
+  const { data: comparisonData } = useQuery<{ comparison: MarketingComparison[] }>({
+    queryKey: ["/api/marketing/comparison"],
+  });
+  const { data: sampleReportsData } = useQuery<{ reports: SampleReport[] }>({
+    queryKey: ["/api/marketing/sample-reports"],
+  });
+  const { data: auditTypeData } = useQuery<{ auditTypes: AuditType[] }>({
+    queryKey: ["/api/marketing/audit-types"],
   });
 
   const submitMutation = useMutation({
@@ -293,6 +307,15 @@ export default function Landing() {
     "GitHub Actions",
     "Pattern Analysis",
   ];
+
+  const competitorComparison = comparisonData?.comparison ?? [
+    { name: "Semgrep", bestFor: "Continuous security scanning in engineering-heavy organizations." },
+    { name: "Snyk", bestFor: "Broad security platform across code, open source, containers, and IaC." },
+    { name: "SonarQube Cloud", bestFor: "Ongoing quality gates and code verification in CI." },
+    { name: "CodeRabbit", bestFor: "PR-time AI review workflows and inline feedback." },
+  ];
+  const sampleReports = sampleReportsData?.reports ?? [];
+  const auditTypes = auditTypeData?.auditTypes ?? [];
 
   const pricingTiers = [
     {
@@ -867,6 +890,44 @@ export default function Landing() {
 
       <section className="pb-12 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="rounded-md border border-border/40 bg-card/20 p-5" data-testid="sample-report-gallery">
+            <h3 className="text-base font-semibold mb-2">Sample report gallery</h3>
+            <p className="text-xs text-muted-foreground mb-3">Preview report styles before connecting your repo.</p>
+            <div className="space-y-2">
+              {sampleReports.map((report) => (
+                <div key={report.title} className="rounded border border-border/30 p-2">
+                  <p className="text-xs font-medium">{report.title}</p>
+                  <p className="text-xs text-muted-foreground">{report.focus}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-md border border-border/40 bg-card/20 p-5" data-testid="modes">
+            <h3 className="text-base font-semibold mb-2">Founder mode + engineering mode</h3>
+            <ul className="space-y-2 text-xs text-muted-foreground">
+              <li>• Founder mode: clear launch/sell decision with top business-critical fixes first.</li>
+              <li>• Engineering mode: exact files, fix sequence, owner, and acceptance criteria.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section className="pb-12 px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto rounded-md border border-border/40 bg-card/20 p-5" data-testid="audit-types-use-cases">
+          <h3 className="text-base font-semibold mb-2">Audit types by use case</h3>
+          <div className="grid md:grid-cols-2 gap-2">
+            {auditTypes.map((auditType) => (
+              <div key={auditType.key} className="rounded border border-border/30 p-3">
+                <p className="text-xs font-medium">{auditType.label}</p>
+                <p className="text-xs text-muted-foreground">{auditType.outcome}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="pb-12 px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="rounded-md border border-border/40 bg-card/20 p-5" data-testid="privacy-promise">
             <h3 className="text-base font-semibold mb-2">Data handling & privacy promise</h3>
             <ul className="space-y-2 text-xs text-muted-foreground">
@@ -877,12 +938,21 @@ export default function Landing() {
             </ul>
           </div>
           <div className="rounded-md border border-primary/30 bg-primary/5 p-5" data-testid="vs-scanners">
-            <h3 className="text-base font-semibold mb-2">Why not just Snyk/Sonar/PR bots?</h3>
+            <div className="flex items-center justify-between gap-2 mb-2"><h3 className="text-base font-semibold">Comparison: where we fit vs common tools</h3><Button size="sm" variant="outline" className="text-xs" onClick={() => navigate("/comparison")}>View full page</Button></div>
+            <div className="space-y-3">
+              {competitorComparison.map((competitor) => (
+                <div key={competitor.name} className="rounded-md border border-border/40 bg-background/30 p-3">
+                  <p className="text-xs font-semibold">{competitor.name}</p>
+                  <p className="text-xs text-muted-foreground">{competitor.bestFor}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs font-semibold mt-4 mb-2">Our wedge (why founders choose CodeScope):</p>
             <ul className="space-y-2 text-xs text-muted-foreground">
-              <li>• Scanners surface alerts. We connect findings to launch and revenue risk.</li>
-              <li>• Bots comment per line. We provide cross-system root cause and fix sequencing.</li>
-              <li>• Commodity tools are noisy. We focus on what blocks launch confidence first.</li>
-              <li>• You leave with an implementation-ready plan, not just a dashboard score.</li>
+              <li>• Better for founder-led or lean teams that cannot triage endless dashboards.</li>
+              <li>• Better for AI-generated MVPs with hidden architecture and reliability debt.</li>
+              <li>• Better prioritization with business context, not just severity labels.</li>
+              <li>• Better answer to: “What should we fix first before launch or a buyer review?”</li>
             </ul>
           </div>
         </div>
