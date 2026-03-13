@@ -11,7 +11,6 @@ import { SCAN_LIMITS, formatRepoSizeLimitMb } from "@shared/scan-limits";
 import {
   Shield,
   Zap,
-  Wrench,
   TrendingUp,
   GitBranch,
   ArrowRight,
@@ -27,7 +26,6 @@ import {
   FileText,
   Video,
   BookOpen,
-  Target,
   Rocket,
   Check,
   Sparkles,
@@ -148,41 +146,45 @@ export default function Landing() {
   const valueBlocks = [
     {
       icon: <Shield className="w-5 h-5" />,
-      title: "Security & Data Leakage",
-      desc: "Hardcoded secrets, auth holes, exposed uploads, SQL injection, unsafe CORS configurations",
-      impact: "Prevent breaches & compliance issues",
+      title: "Security",
+      findings: [
+        { label: "Hardcoded secrets or leaked credentials", severity: "high" },
+        { label: "Auth and permission boundary gaps", severity: "high" },
+        { label: "Unsafe upload and CORS defaults", severity: "medium" },
+      ],
+      impact: "Prevent breaches and customer trust loss",
     },
     {
       icon: <Zap className="w-5 h-5" />,
-      title: "Stability Risks",
-      desc: "Broken dependencies, hallucinated libraries, missing lockfiles, version conflicts",
-      impact: "Avoid crashes & runtime failures",
-    },
-    {
-      icon: <Wrench className="w-5 h-5" />,
-      title: "Maintainability Issues",
-      desc: "Mega-files, duplicate code, missing validation, dead code, TODO/HACK patterns",
-      impact: "Make your code easier to change",
+      title: "Stability",
+      findings: [
+        { label: "Broken dependencies and lockfile drift", severity: "high" },
+        { label: "Hallucinated packages and dead imports", severity: "medium" },
+        { label: "Missing validation and runtime guardrails", severity: "medium" },
+      ],
+      impact: "Avoid crashes during launch week",
     },
     {
       icon: <TrendingUp className="w-5 h-5" />,
-      title: "Scalability Problems",
-      desc: "N+1 queries, missing caching, synchronous bottlenecks, no rate limiting",
-      impact: "Prevent slowdowns at growth",
+      title: "Scalability",
+      findings: [
+        { label: "N+1 query hotspots and sync bottlenecks", severity: "high" },
+        { label: "No caching on high-traffic paths", severity: "medium" },
+        { label: "Missing rate limits and abuse controls", severity: "low" },
+      ],
+      impact: "Keep performance stable as traffic grows",
     },
     {
       icon: <GitBranch className="w-5 h-5" />,
-      title: "CI/CD Weaknesses",
-      desc: "No automated checks, missing GitHub Actions, no branch protection, no deployment safety",
-      impact: "Reduce deployment risk",
+      title: "CI/CD",
+      findings: [
+        { label: "No branch protections or deploy checks", severity: "high" },
+        { label: "Missing security scans in pipelines", severity: "medium" },
+        { label: "Weak rollback and incident readiness", severity: "low" },
+      ],
+      impact: "Reduce bad deploys and production incidents",
     },
-    {
-      icon: <Scan className="w-5 h-5" />,
-      title: "Decision-Ready Prioritization",
-      desc: "We rank technical findings by launch risk, revenue risk, and operational impact so you know what to fix now",
-      impact: "Turn findings into clear next actions",
-    },
-  ];
+  ] as const;
 
   const audienceList = [
     "Founders preparing for launch week and first real users",
@@ -411,8 +413,19 @@ export default function Landing() {
           <div className="max-w-4xl mx-auto text-sm text-muted-foreground">Signed in as <span className="font-medium text-foreground">{user.email}</span></div>
         </section>
       )}
-      <section className="pt-24 pb-20 px-4 sm:px-6">
-        <div className="max-w-4xl mx-auto text-center">
+      <section className="relative overflow-hidden pt-24 pb-20 px-4 sm:px-6">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.2),_transparent_45%),radial-gradient(circle_at_80%_20%,_rgba(59,130,246,0.15),_transparent_40%)]" />
+          <div
+            className="absolute inset-0 opacity-20"
+            style={{
+              backgroundImage:
+                "repeating-linear-gradient(90deg, rgba(148,163,184,0.06) 0px, rgba(148,163,184,0.06) 1px, transparent 1px, transparent 34px)",
+            }}
+          />
+        </div>
+
+        <div className="relative max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 mb-4">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
             <span className="text-xs text-emerald-300">48h SLA: Your first decision-ready risk plan in 2 business days.</span>
@@ -440,7 +453,7 @@ export default function Landing() {
             Don’t buy a list of issues. Buy clarity on what to do next.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-12">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-7">
             <Button size="lg" onClick={() => document.getElementById("intake-form")?.scrollIntoView({ behavior: "smooth" })} data-testid="button-start-audit">
               Start Your Audit
               <ArrowRight className="w-4 h-4 ml-1.5" />
@@ -449,6 +462,35 @@ export default function Landing() {
               See Pricing
               <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
+            <Button
+              variant="secondary"
+              size="lg"
+              onClick={() => document.getElementById("intake-form")?.scrollIntoView({ behavior: "smooth" })}
+              data-testid="button-upload-preview"
+            >
+              Upload Repo for Instant Preview
+            </Button>
+          </div>
+
+          <p className="text-xs text-muted-foreground mb-6" data-testid="text-hero-trust-line">
+            Trusted by 12 AI startups • 48-hour SLA • 100% money-back on Triage if we find nothing
+          </p>
+
+          <div className="mx-auto mb-10 max-w-3xl rounded-md border border-border/40 bg-card/30 px-4 py-3">
+            <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
+              <p>Average audit finds <span className="font-semibold text-foreground">17 critical risks</span></p>
+              <p><span className="font-semibold text-foreground">86% of AI codebases</span> have hidden secrets</p>
+            </div>
+          </div>
+
+          <div className="mx-auto mb-12 max-w-2xl rounded-md border border-cyan-500/30 bg-slate-950/60 p-4 text-left shadow-[0_0_40px_rgba(14,116,144,0.2)]">
+            <p className="mb-2 text-[11px] uppercase tracking-[0.2em] text-cyan-300/80">Instant Upload Preview</p>
+            <div className="space-y-1.5 font-mono text-xs text-cyan-100/80">
+              <p>$ upload repo github.com/acme/ai-assistant</p>
+              <p className="text-cyan-200">✓ Secret scan initialized</p>
+              <p className="text-cyan-200">✓ Dependency risk graph generated</p>
+              <p className="text-amber-200">! 4 critical findings surfaced in preview</p>
+            </div>
           </div>
 
           <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground/60 flex-wrap">
@@ -478,26 +520,42 @@ export default function Landing() {
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-bold mb-3" data-testid="text-value-title">What CodeAudit Decides For You</h2>
             <p className="text-muted-foreground text-sm max-w-lg mx-auto">
-              AI-built products fail in recognizable patterns. We map those patterns faster than generic scanners.
+              AI-built products fail in familiar ways. We highlight the issues most likely to block launch.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {valueBlocks.map((f, i) => (
               <div
                 key={i}
                 data-testid={`card-feature-${i}`}
                 className="group relative rounded-md border border-border/40 bg-card/30 p-5 hover-elevate"
               >
-                <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center mb-3 text-primary">
-                  {f.icon}
+                <div className="mb-4 flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center text-primary">
+                    {f.icon}
+                  </div>
+                  <h3 className="font-semibold text-base">{f.title}</h3>
                 </div>
-                <h3 className="font-semibold text-sm mb-1.5">{f.title}</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed mb-3">{f.desc}</p>
-                <p className="text-[11px] text-primary/70 font-medium flex items-center gap-1">
-                  <Target className="w-3 h-3" />
-                  {f.impact}
-                </p>
+
+                <ul className="space-y-2.5 mb-4">
+                  {f.findings.map((finding) => (
+                    <li key={finding.label} className="flex items-start gap-2 text-xs">
+                      <span
+                        className={`mt-1.5 h-2 w-2 rounded-full ${
+                          finding.severity === "high"
+                            ? "bg-red-500"
+                            : finding.severity === "medium"
+                            ? "bg-orange-400"
+                            : "bg-emerald-400"
+                        }`}
+                      />
+                      <span className="text-muted-foreground">{finding.label}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <p className="text-[11px] text-primary/70 font-medium">{f.impact}</p>
               </div>
             ))}
           </div>
@@ -511,7 +569,7 @@ export default function Landing() {
               <p className="text-xs uppercase tracking-wider text-primary/80 mb-2" data-testid="text-framework-kicker">CodeAudit SignalLens™</p>
               <h2 className="text-2xl sm:text-3xl font-bold mb-3" data-testid="text-framework-title">Our proprietary AI-built repo failure framework</h2>
               <p className="text-sm text-muted-foreground max-w-2xl mx-auto" data-testid="text-framework-subtitle">
-                We do not run a generic audit. We detect recurring AI-build failure patterns and turn them into a prioritized remediation plan.
+                SignalLens turns recurring AI-build failure patterns into a prioritized remediation plan.
               </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
