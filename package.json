@@ -8,7 +8,7 @@
     "build": "tsx script/build.ts",
     "start": "NODE_ENV=production node dist/index.cjs",
     "check": "tsc",
-    "db:push": "npx --yes -p drizzle-kit@0.31.8 drizzle-kit push --config=drizzle.config.ts",
+    "db:push": "npm exec -- drizzle-kit push --config=drizzle.config.ts",
     "lint": "ESLINT_USE_FLAT_CONFIG=false npx --yes -p eslint@8.57.1 -p @typescript-eslint/parser@8.41.0 -p @typescript-eslint/eslint-plugin@8.41.0 -p eslint-plugin-react-hooks@4.6.2 -p eslint-config-prettier@9.1.0 eslint . --ext .ts,.tsx,.js,.jsx,.mjs,.cjs",
     "format": "npx --yes prettier@3.3.3 --write .",
     "format:check": "npx --yes prettier@3.3.3 --check .",
