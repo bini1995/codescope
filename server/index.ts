@@ -9,11 +9,40 @@ import { passportMiddleware, sessionMiddleware } from "./middleware/auth";
 import { validateEnv } from "./env";
 
 const env = validateEnv();
+const isProduction = env.NODE_ENV === "production";
+
+function assertNoDefaultProductionSecrets() {
+  if (!isProduction) return;
+
+  const insecureDefaults = new Set([
+    "change-me",
+    "dev-session-secret-change-me",
+    "base64-or-hex-32-byte-key",
+  ]);
+
+  const configuredSecrets = [
+    env.SESSION_SECRET,
+    env.AUTH_SECRET,
+    env.STRIPE_WEBHOOK_SECRET,
+    process.env.DATA_ENCRYPTION_KEY,
+  ].filter((value): value is string => Boolean(value));
+
+  const hasDefaultSecret = configuredSecrets
+    .map((value) => value.trim().toLowerCase())
+    .some((value) => insecureDefaults.has(value));
+
+  if (hasDefaultSecret) {
+    throw new Error(
+      "Refusing to boot in production: replace default secrets (SESSION_SECRET/AUTH_SECRET, DATA_ENCRYPTION_KEY, STRIPE_WEBHOOK_SECRET) with real values."
+    );
+  }
+}
+
+assertNoDefaultProductionSecrets();
 
 const app = express();
 const httpServer = createServer(app);
 
-const isProduction = env.NODE_ENV === "production";
 const trustProxy = env.TRUST_PROXY;
 app.set(
   "trust proxy",

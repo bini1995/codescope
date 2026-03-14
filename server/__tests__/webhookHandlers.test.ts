@@ -38,7 +38,7 @@ test("records non-checkout events as processed", async () => {
     } as any
   );
 
-  assert.equal(result, false);
+  assert.equal(result.processed, false);
   assert.equal(calls[0].status, "processed");
 });
 
@@ -55,7 +55,7 @@ test("marks invalid checkout sessions as ignored", async () => {
     } as any
   );
 
-  assert.equal(result, false);
+  assert.equal(result.processed, false);
   assert.equal(calls[0].status, "ignored");
 });
 
@@ -69,7 +69,8 @@ test("processes paid checkout sessions with audit metadata", async () => {
     },
   } as any);
 
-  assert.equal(result, true);
+  assert.equal(result.processed, true);
+  assert.equal(result.auditId, "audit_123");
   assert.equal(calls[0].auditId, "audit_123");
   assert.equal(calls[0].stripeSessionId, "cs_test_123");
 });

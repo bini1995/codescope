@@ -11,6 +11,9 @@ import { randomBytes } from "crypto";
 import { submitAuditSchema, updateAuditSchema } from "./auditSchemas";
 import { db } from "./db";
 import { buildAuditBusinessAssets } from "./auditArtifacts";
+import { createRateLimit } from "./rateLimit";
+import { parseGitHubRepo, runPreviewScan } from "./previewScan";
+import { buildPreviewPdf, emailPreviewPdf } from "./previewDelivery";
 import { sql } from "drizzle-orm";
 import {
   clearAuthSession,
@@ -41,6 +44,13 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+
+const previewScanSchema = z.object({
+  repoUrl: z.string().url(),
+  githubToken: z.string().min(20),
+  email: z.string().email(),
+});
+
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
@@ -50,12 +60,6 @@ function generateOauthState(): string {
 }
 
 
-function parseGitHubRepo(url: string): { owner: string; repo: string } | null {
-  const normalized = url.trim().replace(/\.git$/, "");
-  const match = normalized.match(/^https?:\/\/github\.com\/([^\/]+)\/([^\/]+)$/i);
-  if (!match) return null;
-  return { owner: match[1], repo: match[2] };
-}
 
 function repoBusinessContextByStars(stars: number): string {
   if (stars >= 500) return "visible traction; unresolved risk can impact broader customer trust quickly";
@@ -92,6 +96,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   await seedStripeProducts();
 
   app.use(optionalAuth);
+
+  const previewScanRateLimit = createRateLimit({
+    windowMs: 60_000,
+    max: 5,
+    message: "Too many preview scan requests. Try again in a minute.",
+  });
 
   app.post("/api/auth/register", async (req, res) => {
     const parsed = registerSchema.safeParse(req.body);
@@ -282,6 +292,40 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       });
     } catch {
       return res.status(502).json({ message: "Failed to contact GitHub" });
+    }
+  });
+
+  app.post("/api/scan/preview", previewScanRateLimit, async (req, res) => {
+    const parsed = previewScanSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
+
+    try {
+      const preview = await runPreviewScan({
+        repoUrl: parsed.data.repoUrl,
+        githubToken: parsed.data.githubToken,
+      });
+
+      const pdf = buildPreviewPdf(preview);
+      await emailPreviewPdf({
+        to: normalizeEmail(parsed.data.email),
+        repoUrl: parsed.data.repoUrl,
+        scan: preview,
+        pdf,
+      });
+
+      return res.status(202).json({
+        queued: true,
+        summary: {
+          repository: preview.fullName,
+          filesScanned: preview.filesScanned,
+          semgrepMatches: preview.semgrepMatches.length,
+          gitleaksMatches: preview.gitleaksMatches.length,
+        },
+      });
+    } catch (error: any) {
+      const message = typeof error?.message === "string" ? error.message : "Preview scan failed";
+      const status = /limit|valid GitHub repository URL/i.test(message) ? 400 : 502;
+      return res.status(status).json({ message });
     }
   });
 

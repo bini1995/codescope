@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import { getStripeSync, getUncachableStripeClient } from "./stripeClient";
 import { storage } from "./storage";
+import { enqueueScan } from "./scanQueue";
 
 type WebhookEventStorage = Pick<typeof storage, "recordStripeWebhookEvent" | "processPaidCheckoutWebhookEvent">;
 
@@ -27,22 +28,26 @@ export class WebhookHandlers {
     const sync = await getStripeSync();
     await sync.processWebhook(payload, signature);
 
-    const processed = await processStripeWebhookTransition(event, storage);
+    const transition = await processStripeWebhookTransition(event, storage);
 
-    if (processed) {
-      console.log(`Checkout webhook ${event.id} unlocked an audit payment`);
+    if (transition.processed && transition.auditId) {
+      const queueResult = enqueueScan(transition.auditId);
+      console.log(`Checkout webhook ${event.id} unlocked audit ${transition.auditId} payment and queued scan (queued=${queueResult.queued}, position=${queueResult.position})`);
     }
   }
 }
 
-export async function processStripeWebhookTransition(event: Stripe.Event, webhookStorage: WebhookEventStorage): Promise<boolean> {
+export async function processStripeWebhookTransition(
+  event: Stripe.Event,
+  webhookStorage: WebhookEventStorage
+): Promise<{ processed: boolean; auditId?: string }> {
   if (event.type !== "checkout.session.completed") {
     await webhookStorage.recordStripeWebhookEvent({
       eventId: event.id,
       eventType: event.type,
       status: "processed",
     });
-    return false;
+    return { processed: false };
   }
 
   const session = event.data.object as Stripe.Checkout.Session;
@@ -56,13 +61,15 @@ export async function processStripeWebhookTransition(event: Stripe.Event, webhoo
       stripeSessionId: session.id,
       status: "ignored",
     });
-    return false;
+    return { processed: false };
   }
 
-  return webhookStorage.processPaidCheckoutWebhookEvent({
+  const processed = await webhookStorage.processPaidCheckoutWebhookEvent({
     eventId: event.id,
     eventType: event.type,
     auditId,
     stripeSessionId: session.id,
   });
+
+  return processed ? { processed: true, auditId } : { processed: false, auditId };
 }

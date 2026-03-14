@@ -304,8 +304,15 @@ export async function scanRepository(auditId: string): Promise<void> {
       addLog(
         "repo_limits",
         "warn",
-        `Repository has ${files.length} files. Processing first ${SCAN_LIMITS.maxFilesToScan} files for reliability.`
+        `Repository has ${files.length} files. Limit is ${SCAN_LIMITS.maxFilesToScan}. Skipping deep scan and returning metadata-only results.`
       );
+      await storage.updateAudit(auditId, {
+        status: "complete",
+        scanLog: log,
+        scannedAt: new Date(),
+        executiveSummary: `Repository exceeds the supported file limit (${SCAN_LIMITS.maxFilesToScan} files). We captured metadata only to keep scans reliable.`,
+      });
+      return;
     }
 
     for (const sensitiveFile of SENSITIVE_FILES) {

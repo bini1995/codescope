@@ -11,6 +11,7 @@ const baseEnvSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   SESSION_SECRET: z.string().min(1).optional(),
   AUTH_SECRET: z.string().min(1).optional(),
+  DATA_ENCRYPTION_KEY: z.string().min(1).optional(),
   STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(),
   FRONTEND_URL: z.string().optional(),
   CORS_ALLOWED_ORIGINS: z.string().optional(),
@@ -30,6 +31,30 @@ export function validateEnv(rawEnv: NodeJS.ProcessEnv = process.env): AppEnv {
   if (parsed.NODE_ENV === "production") {
     if (!parsed.SESSION_SECRET && !parsed.AUTH_SECRET) {
       throw new Error("SESSION_SECRET (or AUTH_SECRET) is required in production");
+    }
+
+    if (!parsed.DATA_ENCRYPTION_KEY) {
+      throw new Error("DATA_ENCRYPTION_KEY is required in production");
+    }
+
+    const defaultSecrets = [
+      parsed.SESSION_SECRET,
+      parsed.AUTH_SECRET,
+      parsed.DATA_ENCRYPTION_KEY,
+    ]
+      .filter((value): value is string => Boolean(value))
+      .map((value) => value.trim().toLowerCase());
+
+    const insecureDefaults = new Set([
+      "change-me",
+      "dev-session-secret-change-me",
+      "base64-or-hex-32-byte-key",
+    ]);
+
+    if (defaultSecrets.some((value) => insecureDefaults.has(value))) {
+      throw new Error(
+        "Refusing to start in production with default secrets. Set SESSION_SECRET/AUTH_SECRET and DATA_ENCRYPTION_KEY to real values."
+      );
     }
   }
 
