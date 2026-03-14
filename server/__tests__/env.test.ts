@@ -16,7 +16,6 @@ test("validateEnv requires production secrets", () => {
     NODE_ENV: "production",
     DATABASE_URL: "postgres://db",
     SESSION_SECRET: "secret",
-    DATA_ENCRYPTION_KEY: "super-secret-key",
   });
 
   assert.equal(parsed.NODE_ENV, "production");
@@ -27,7 +26,6 @@ test("validateEnv accepts production env when required vars are present", () => 
     NODE_ENV: "production",
     DATABASE_URL: "postgres://db",
     SESSION_SECRET: "secret",
-    DATA_ENCRYPTION_KEY: "super-secret-key",
     STRIPE_WEBHOOK_SECRET: "whsec_123",
   });
 
