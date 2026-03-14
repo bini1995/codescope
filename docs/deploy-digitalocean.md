@@ -239,11 +239,27 @@ pm2 save
 curl -I http://127.0.0.1:5000
 ```
 
-### B) `npm ci` complains about missing lockfile
+### B) PM2 loops with `Cannot find module '/var/www/codeauditapp/codescope/dist/index.cjs'`
+
+This means the production bundle was not built (or was cleaned) before PM2 started the app.
+
+Run from the repo root on the VPS:
+
+```bash
+cd /var/www/codeauditapp/codescope
+git pull --ff-only
+npm ci
+npm run build
+pm2 restart codeauditapp --update-env
+```
+
+If `npm run build` fails, fix that first—`npm start` requires `dist/index.cjs`.
+
+### C) `npm ci` complains about missing lockfile
 
 You are not in the repository root. Run `pwd`, then `cd` into the directory that contains `package-lock.json` and retry.
 
-### C) `npm run db:push` fails with `TypeError: Invalid URL`
+### D) `npm run db:push` fails with `TypeError: Invalid URL`
 
 This means `DATABASE_URL` is malformed (often placeholders were not replaced, or password characters were not URL-encoded).
 
@@ -261,7 +277,7 @@ node -e 'console.log(new URL(process.env.DATABASE_URL).toString())'
 
 If the `node -e` command throws, fix `DATABASE_URL` first, then run `npm run db:push` again.
 
-### D) `npm run db:push` fails with `Error please install required packages: 'drizzle-orm'`
+### E) `npm run db:push` fails with `Error please install required packages: 'drizzle-orm'`
 
 This usually means dependencies were not installed after pulling updates.
 
@@ -288,7 +304,7 @@ rm -rf node_modules
 npm ci
 ```
 
-### E) PM2 shows `online` briefly but port 5000 is still closed
+### F) PM2 shows `online` briefly but port 5000 is still closed
 
 The process is crashing after start. Use:
 
@@ -299,7 +315,7 @@ pm2 restart codeauditapp --update-env
 
 Most often this is caused by bad/missing `DATABASE_URL`.
 
-### F) App logs show: `The endpoint has been disabled. Enable it using Neon API and retry.`
+### G) App logs show: `The endpoint has been disabled. Enable it using Neon API and retry.`
 
 This is a Neon-side issue: your project branch endpoint is disabled/suspended, so the app cannot connect.
 
@@ -325,7 +341,7 @@ curl -I http://127.0.0.1:5000
 If you are not using Neon, this specific error does not apply; instead verify your provider allows inbound connections from your Droplet.
 
 
-### G) `password authentication failed for user 'neondb_owner'` (Postgres code `28P01`)
+### H) `password authentication failed for user 'neondb_owner'` (Postgres code `28P01`)
 
 This means host/network is reachable, but your DB password is wrong.
 
