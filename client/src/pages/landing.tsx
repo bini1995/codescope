@@ -510,7 +510,7 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-background">
       <nav className="sticky top-0 left-0 right-0 z-50 border-b border-border/40 bg-background/90 backdrop-blur-xl">
-        <div className="max-w-6xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
               <Code2 className="w-4 h-4 text-primary-foreground" />
@@ -572,7 +572,7 @@ export default function Landing() {
 
       {user && (
         <section className="pt-24 pb-4 px-4 sm:px-6">
-          <div className="max-w-4xl mx-auto text-sm text-muted-foreground">
+          <div className="max-w-6xl mx-auto text-sm text-muted-foreground">
             Signed in as <span className="font-medium text-foreground">{user.email}</span>
           </div>
         </section>
@@ -589,7 +589,7 @@ export default function Landing() {
           />
         </div>
 
-        <div className="relative max-w-4xl mx-auto text-center">
+        <div className="relative max-w-4xl xl:max-w-6xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 mb-4">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
             <span className="text-xs text-emerald-300">
@@ -748,7 +748,7 @@ export default function Landing() {
       </section>
 
       <section id="how-it-works" className="pb-20 px-4 sm:px-6">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-bold mb-3" data-testid="text-value-title">
               What CodeAudit Decides For You
@@ -798,7 +798,7 @@ export default function Landing() {
       </section>
 
       <section className="pb-20 px-4 sm:px-6">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="rounded-md border border-border/40 bg-card/20 p-6 sm:p-8">
             <div className="text-center mb-8">
               <p
@@ -837,7 +837,7 @@ export default function Landing() {
       </section>
 
       <section id="how-it-works" className="pb-20 px-4 sm:px-6">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="text-center mb-10">
             <h2 className="text-2xl sm:text-3xl font-bold mb-3" data-testid="text-how-title">
               How It Works
@@ -928,7 +928,7 @@ export default function Landing() {
       </section>
 
       <section className="pb-20 px-4 sm:px-6">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="rounded-md border border-border/40 bg-card/20 p-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
               <div>
@@ -984,7 +984,7 @@ export default function Landing() {
       </section>
 
       <section className="pb-16 px-4 sm:px-6" data-testid="section-testimonials">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="text-center mb-8">
             <p className="text-xs uppercase tracking-wider text-primary/80 mb-2">Social proof</p>
             <h2 className="text-2xl sm:text-3xl font-bold mb-2">
@@ -1013,7 +1013,7 @@ export default function Landing() {
       </section>
 
       <section className="pb-14 px-4 sm:px-6">
-        <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div
             className="rounded-md border border-border/40 bg-card/20 p-5"
             data-testid="card-what-we-check"
@@ -1046,7 +1046,7 @@ export default function Landing() {
       </section>
 
       <section className="pb-16 px-4 sm:px-6">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="rounded-md border border-border/40 bg-card/20 p-6">
             <h3 className="text-lg font-semibold mb-2" data-testid="text-preview-title">
               Instant scan vs expert audit
@@ -1107,7 +1107,7 @@ export default function Landing() {
       </section>
 
       <section id="pricing" className="pb-20 px-4 sm:px-6">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-bold mb-3" data-testid="text-pricing-title">
               Choose Your Decision Path
@@ -1258,7 +1258,7 @@ export default function Landing() {
       </section>
 
       <section id="sample-report" className="pb-12 px-4 sm:px-6">
-        <div className="max-w-4xl mx-auto space-y-4">
+        <div className="max-w-6xl mx-auto space-y-4">
           <div
             className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-4"
             data-testid="sample-report-callout"
@@ -1381,7 +1381,7 @@ export default function Landing() {
       </section>
 
       <section className="pb-12 px-4 sm:px-6">
-        <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4">
           <div
             className="rounded-md border border-border/40 bg-card/20 p-4"
             data-testid="who-its-for"
@@ -1408,7 +1408,7 @@ export default function Landing() {
       </section>
 
       <section className="pb-14 px-4 sm:px-6">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <h3
             className="text-lg font-semibold text-center mb-2"
             data-testid="text-urgency-offers-title"
@@ -1473,7 +1473,7 @@ export default function Landing() {
       </section>
 
       <section className="pb-16 px-4 sm:px-6">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="text-center mb-6">
             <h3 className="text-lg font-semibold mb-2" data-testid="text-artifacts-title">
               Artifacts your team can use immediately
@@ -1499,7 +1499,7 @@ export default function Landing() {
       </section>
 
       <section className="pb-12 px-4 sm:px-6">
-        <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div
             className="rounded-md border border-border/40 bg-card/20 p-5"
             data-testid="sample-report-gallery"
@@ -1533,7 +1533,7 @@ export default function Landing() {
 
       <section className="pb-12 px-4 sm:px-6">
         <div
-          className="max-w-5xl mx-auto rounded-md border border-border/40 bg-card/20 p-5"
+          className="max-w-6xl mx-auto rounded-md border border-border/40 bg-card/20 p-5"
           data-testid="audit-types-use-cases"
         >
           <h3 className="text-base font-semibold mb-2">Audit types by use case</h3>
@@ -1549,7 +1549,7 @@ export default function Landing() {
       </section>
 
       <section className="pb-12 px-4 sm:px-6">
-        <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div
             className="rounded-md border border-border/40 bg-card/20 p-5"
             data-testid="privacy-promise"
