@@ -2,16 +2,40 @@ import Stripe from 'stripe';
 
 let connectionSettings: any;
 
+function getReplitToken(): string | null {
+  return process.env.REPL_IDENTITY
+    ? `repl ${process.env.REPL_IDENTITY}`
+    : process.env.WEB_REPL_RENEWAL
+      ? `depl ${process.env.WEB_REPL_RENEWAL}`
+      : null;
+}
+
+function getEnvStripeCredentials() {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY;
+
+  if (!secretKey || !publishableKey) {
+    return null;
+  }
+
+  return { secretKey, publishableKey };
+}
+
 async function getCredentials() {
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
-  const xReplitToken = process.env.REPL_IDENTITY
-    ? 'repl ' + process.env.REPL_IDENTITY
-    : process.env.WEB_REPL_RENEWAL
-      ? 'depl ' + process.env.WEB_REPL_RENEWAL
-      : null;
+  const xReplitToken = getReplitToken();
+
+  const envCredentials = getEnvStripeCredentials();
+  if (envCredentials) {
+    return envCredentials;
+  }
+
+  if (!hostname) {
+    throw new Error('Stripe credentials are not configured. Set STRIPE_SECRET_KEY and STRIPE_PUBLISHABLE_KEY outside Replit.');
+  }
 
   if (!xReplitToken) {
-    throw new Error('X-Replit-Token not found for repl/depl');
+    throw new Error('X-Replit-Token not found for repl/depl. Set STRIPE_SECRET_KEY and STRIPE_PUBLISHABLE_KEY outside Replit.');
   }
 
   const connectorName = 'stripe';
@@ -64,6 +88,10 @@ let stripeSync: any = null;
 
 export async function getStripeSync() {
   if (!stripeSync) {
+    if (!getReplitToken()) {
+      throw new Error('Stripe sync requires Replit connectors. Set SKIP_STRIPE_INIT=true outside Replit.');
+    }
+
     const { StripeSync } = await import('stripe-replit-sync');
     const secretKey = await getStripeSecretKey();
     stripeSync = new StripeSync({
