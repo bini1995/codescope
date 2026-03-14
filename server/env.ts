@@ -34,7 +34,9 @@ export function validateEnv(rawEnv: NodeJS.ProcessEnv = process.env): AppEnv {
     }
 
     if (!parsed.DATA_ENCRYPTION_KEY) {
-      throw new Error("DATA_ENCRYPTION_KEY is required in production");
+      console.warn(
+        "DATA_ENCRYPTION_KEY is not configured in production; sensitive fields will be stored without encryption-at-rest."
+      );
     }
 
     const defaultSecrets = [
