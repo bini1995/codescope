@@ -10,6 +10,7 @@ import { validateEnv } from "./env";
 
 const env = validateEnv();
 const isProduction = env.NODE_ENV === "production";
+const hasReplitConnectorAuth = Boolean(process.env.REPL_IDENTITY || process.env.WEB_REPL_RENEWAL);
 
 function assertNoDefaultProductionSecrets() {
   if (!isProduction) return;
@@ -84,10 +85,14 @@ async function initStripe() {
   }
 }
 
-if (!env.SKIP_STRIPE_INIT) {
+if (!env.SKIP_STRIPE_INIT && hasReplitConnectorAuth) {
   initStripe().catch((error) => {
     console.error("Unhandled Stripe initialization error:", error);
   });
+} else if (!env.SKIP_STRIPE_INIT && !hasReplitConnectorAuth) {
+  console.warn(
+    "Skipping Stripe sync initialization outside Replit connector runtime. Set SKIP_STRIPE_INIT=true to silence this warning."
+  );
 }
 
 if (isProduction && !env.STRIPE_WEBHOOK_SECRET) {

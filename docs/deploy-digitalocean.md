@@ -74,6 +74,10 @@ PORT=5000
 DATABASE_URL='postgresql://DB_USER:DB_PASSWORD@DB_HOST/DB_NAME?sslmode=verify-full'
 AUTH_SECRET='REPLACE_WITH_LONG_RANDOM_SECRET'
 REPLIT_DOMAINS=codeauditapp.com,www.codeauditapp.com
+SKIP_STRIPE_INIT=true
+STRIPE_SECRET_KEY='sk_live_or_test_xxx'
+STRIPE_PUBLISHABLE_KEY='pk_live_or_test_xxx'
+STRIPE_WEBHOOK_SECRET='whsec_xxx'
 ENV
 ```
 
@@ -86,6 +90,8 @@ Important:
 - Wrap `DATABASE_URL` in single quotes in `.env` exactly as shown above.
 - If your URL has extra params like `&channel_binding=require`, quotes are mandatory; otherwise Bash treats `&` as a background operator when you run `source .env`.
 - Quote `AUTH_SECRET` too (especially if it contains `!`, `&`, `$`, or spaces).
+- Outside Replit, set `SKIP_STRIPE_INIT=true` unless you are running in a Replit connectors runtime.
+- Outside Replit, provide Stripe API keys explicitly as `STRIPE_SECRET_KEY` and `STRIPE_PUBLISHABLE_KEY`.
 
 Load `.env` into the current shell before DB and PM2 commands:
 
@@ -222,6 +228,10 @@ PORT=5000
 DATABASE_URL='postgresql://DB_USER:DB_PASSWORD@DB_HOST/DB_NAME?sslmode=verify-full'
 AUTH_SECRET='REPLACE_WITH_LONG_RANDOM_SECRET'
 REPLIT_DOMAINS='codeauditapp.com,www.codeauditapp.com'
+SKIP_STRIPE_INIT=true
+STRIPE_SECRET_KEY='sk_live_or_test_xxx'
+STRIPE_PUBLISHABLE_KEY='pk_live_or_test_xxx'
+STRIPE_WEBHOOK_SECRET='whsec_xxx'
 ENV
 
 npm ci
@@ -315,7 +325,29 @@ pm2 restart codeauditapp --update-env
 
 Most often this is caused by bad/missing `DATABASE_URL`.
 
-### G) App logs show: `The endpoint has been disabled. Enable it using Neon API and retry.`
+### G) Logs show `X-Replit-Token not found for repl/depl` or `Failed to initialize Stripe`
+
+You're deploying outside Replit, so Replit connector auth is unavailable.
+
+Set these in `.env`:
+
+```bash
+SKIP_STRIPE_INIT=true
+STRIPE_SECRET_KEY='sk_live_or_test_xxx'
+STRIPE_PUBLISHABLE_KEY='pk_live_or_test_xxx'
+STRIPE_WEBHOOK_SECRET='whsec_xxx'
+```
+
+Then reload and restart:
+
+```bash
+cd /var/www/codeauditapp/codescope
+set -a && source .env && set +a
+pm2 restart codeauditapp --update-env
+pm2 logs codeauditapp --lines 100
+```
+
+### H) App logs show: `The endpoint has been disabled. Enable it using Neon API and retry.`
 
 This is a Neon-side issue: your project branch endpoint is disabled/suspended, so the app cannot connect.
 
