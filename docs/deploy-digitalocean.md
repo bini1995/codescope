@@ -261,7 +261,34 @@ node -e 'console.log(new URL(process.env.DATABASE_URL).toString())'
 
 If the `node -e` command throws, fix `DATABASE_URL` first, then run `npm run db:push` again.
 
-### D) PM2 shows `online` briefly but port 5000 is still closed
+### D) `npm run db:push` fails with `Error please install required packages: 'drizzle-orm'`
+
+This usually means dependencies were not installed after pulling updates.
+
+Run from the repo root on the VPS:
+
+```bash
+cd /var/www/codeauditapp/codescope
+git pull --ff-only
+npm ci
+set -a && source .env && set +a
+npm run db:push
+```
+
+If it still fails, verify `drizzle-orm` is present:
+
+```bash
+npm ls drizzle-orm
+```
+
+If `npm ls` reports missing packages, remove partial installs and reinstall cleanly:
+
+```bash
+rm -rf node_modules
+npm ci
+```
+
+### E) PM2 shows `online` briefly but port 5000 is still closed
 
 The process is crashing after start. Use:
 
@@ -272,7 +299,7 @@ pm2 restart codeauditapp --update-env
 
 Most often this is caused by bad/missing `DATABASE_URL`.
 
-### E) App logs show: `The endpoint has been disabled. Enable it using Neon API and retry.`
+### F) App logs show: `The endpoint has been disabled. Enable it using Neon API and retry.`
 
 This is a Neon-side issue: your project branch endpoint is disabled/suspended, so the app cannot connect.
 
@@ -298,7 +325,7 @@ curl -I http://127.0.0.1:5000
 If you are not using Neon, this specific error does not apply; instead verify your provider allows inbound connections from your Droplet.
 
 
-### F) `password authentication failed for user 'neondb_owner'` (Postgres code `28P01`)
+### G) `password authentication failed for user 'neondb_owner'` (Postgres code `28P01`)
 
 This means host/network is reachable, but your DB password is wrong.
 

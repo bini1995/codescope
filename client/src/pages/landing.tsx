@@ -519,7 +519,7 @@ export default function Landing() {
               CodeAudit
             </span>
           </div>
-          <NavigationMenu className="hidden md:flex">
+          <NavigationMenu className="hidden sm:flex">
             <NavigationMenuList>
               {navItems.map((item) => (
                 <NavigationMenuItem key={item.label}>
@@ -536,7 +536,7 @@ export default function Landing() {
           </NavigationMenu>
 
           <Sheet>
-            <SheetTrigger asChild className="md:hidden">
+            <SheetTrigger asChild className="sm:hidden">
               <Button size="icon" variant="ghost" aria-label="Open navigation menu">
                 <Menu className="h-5 w-5" />
               </Button>
@@ -892,7 +892,7 @@ export default function Landing() {
                   Quick Walkthrough
                 </p>
                 <h3 className="text-sm sm:text-base font-semibold">
-                  12-second preview: repo upload → instant signal
+                  12-second demo: submit your GitHub repo and get an instant risk snapshot
                 </h3>
               </div>
               <Video className="w-4 h-4 text-primary mt-0.5" />
