@@ -16,6 +16,7 @@ test("validateEnv requires production secrets", () => {
     NODE_ENV: "production",
     DATABASE_URL: "postgres://db",
     SESSION_SECRET: "secret",
+    DATA_ENCRYPTION_KEY: "super-secret-key",
   });
 
   assert.equal(parsed.NODE_ENV, "production");
@@ -26,9 +27,24 @@ test("validateEnv accepts production env when required vars are present", () => 
     NODE_ENV: "production",
     DATABASE_URL: "postgres://db",
     SESSION_SECRET: "secret",
+    DATA_ENCRYPTION_KEY: "super-secret-key",
     STRIPE_WEBHOOK_SECRET: "whsec_123",
   });
 
   assert.equal(parsed.NODE_ENV, "production");
   assert.equal(parsed.PORT, 5000);
+});
+
+
+test("validateEnv rejects default placeholder secrets in production", () => {
+  assert.throws(
+    () =>
+      validateEnv({
+        NODE_ENV: "production",
+        DATABASE_URL: "postgres://db",
+        SESSION_SECRET: "change-me",
+        DATA_ENCRYPTION_KEY: "base64-or-hex-32-byte-key",
+      }),
+    /Refusing to start in production with default secrets/
+  );
 });

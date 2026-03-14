@@ -50,9 +50,15 @@ REPLIT_DEPLOYMENT=0
 VITE_API_BASE_URL=https://your-backend.example.com
 
 # Security (required in production)
-SESSION_SECRET=change-me
-DATA_ENCRYPTION_KEY=base64-or-hex-32-byte-key
+SESSION_SECRET=<generate-a-long-random-secret>
+DATA_ENCRYPTION_KEY=<32-byte-key-in-base64-or-64-char-hex>
 ```
+
+For Railway/Neon production deploys, set these in Railway service variables (never commit defaults):
+
+- `SESSION_SECRET` or `AUTH_SECRET`: long random string
+- `DATA_ENCRYPTION_KEY`: 32-byte key (base64) or 64-char hex
+- `STRIPE_WEBHOOK_SECRET`: from your Stripe webhook endpoint
 
 ### 3) Push database schema
 ```bash
@@ -86,6 +92,17 @@ If you want beta access to the expert audit service, contact: **beta@codeaudit.d
 - Privacy policy: `docs/privacy-policy.md`
 - Retention policy: `docs/retention-policy.md`
 - Self-service deletion endpoint: `POST /api/privacy/delete-my-data` with body `{ "confirmation": "DELETE" }` (authenticated).
+
+
+## Instant preview API
+
+- Endpoint: `POST /api/scan/preview`
+- Purpose: fetch GitHub tree + run lightweight Semgrep/Gitleaks-style checks + email a preview PDF.
+- Request body:
+  - `repoUrl`: GitHub repo URL
+  - `githubToken`: GitHub token with repo read access
+  - `email`: destination email for the PDF
+- Safety guards: capped at **1,200 files** and **20 MB repo size**, plus per-IP rate limiting on preview requests.
 
 ## Scan reliability safeguards
 
