@@ -352,6 +352,14 @@ export default function Landing() {
       value: "Maps findings to security, availability, and change-management evidence expected in buyer diligence.",
     },
     {
+      standard: "ISO 27001 readiness support",
+      value: "Highlights control and evidence gaps across Annex A themes so teams can tighten ISMS execution before formal audits.",
+    },
+    {
+      standard: "HIPAA safeguard readiness",
+      value: "Flags technical and process weaknesses that commonly block HIPAA security rule implementation in healthcare workflows.",
+    },
+    {
       standard: "NIST CSF 2.0 alignment",
       value: "Translates findings into Govern, Protect, Detect, Respond, and Recover actions for practical risk governance.",
     },
@@ -702,8 +710,8 @@ export default function Landing() {
             className="text-lg text-muted-foreground max-w-2xl mx-auto mb-6 leading-relaxed"
             data-testid="text-hero-subtitle"
           >
-            Audits packaged around moments of urgency, not generic checklists. Translate code risk
-            into launch risk, revenue risk, and operational risk.
+            We identify 12+ categories of AI-generated security and reliability flaws that
+            standard linters miss, then map each issue to launch, revenue, and operational risk.
           </p>
 
           <p className="text-sm text-muted-foreground/70 mb-2">
@@ -715,6 +723,17 @@ export default function Landing() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-7">
+            <Button
+              variant="secondary"
+              size="lg"
+              onClick={() =>
+                handleCtaClick("Get Started", "hero", () => scrollToSection("pricing"))
+              }
+              data-testid="button-get-started-pricing"
+            >
+              Get Started
+              <ArrowRight className="w-4 h-4 ml-1.5" />
+            </Button>
             <Button size="lg" asChild data-testid="button-start-audit">
               <a
                 href={buildPrefilledCheckoutLink(STRIPE_PAYMENT_LINKS.instantSignal, "Instant Signal")}
@@ -725,6 +744,20 @@ export default function Landing() {
                 Get My Audit
                 <ArrowRight className="w-4 h-4 ml-1.5" />
               </a>
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() =>
+                handleCtaClick("View Sample Audit", "hero", () => {
+                  setShowSampleReport(true);
+                  scrollToSection("sample-report");
+                })
+              }
+              data-testid="button-view-sample-audit-hero"
+            >
+              View Sample Audit
+              <FileText className="w-4 h-4 ml-1.5" />
             </Button>
             <Button variant="outline" size="lg" asChild data-testid="button-guided-review">
               <a
@@ -1250,7 +1283,7 @@ export default function Landing() {
               <span className="font-semibold text-foreground">
                 Every audit is verified by a Senior Engineer, not just another AI.
               </span>{" "}
-              You get expert judgment on exploitability, business impact, and what to fix first.
+              A human reviewer validates every critical finding to eliminate AI hallucinations and give you expert judgment on exploitability, business impact, and what to fix first.
             </p>
             <div className="rounded border border-border/40 bg-background/60 p-3 text-xs text-muted-foreground">
               Automated tooling powers speed; expert signature provides confidence for founder, CTO, and buyer conversations.
@@ -1648,6 +1681,10 @@ export default function Landing() {
               We do not issue compliance certifications. We provide evidence-ready findings and control mappings that accelerate SOC 2, NIST, and EU AI Act readiness workstreams.
             </p>
           </div>
+          <div className="mb-4 rounded-md border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-100">
+            <span className="font-semibold text-emerald-200">Get SOC2-Ready with our Audit.</span>{" "}
+            We also map findings to ISO 27001 and HIPAA safeguard expectations so your team can move faster in security reviews.
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {complianceAlignments.map((item) => (
               <div key={item.standard} className="rounded border border-border/40 bg-background/50 p-3">
@@ -1886,10 +1923,11 @@ export default function Landing() {
         <div className="max-w-xl mx-auto">
           <div className="text-center mb-8">
             <h2 className="text-2xl sm:text-3xl font-bold mb-2" data-testid="text-form-title">
-              Start Your Decision Plan
+              Need custom scoping? Start Your Decision Plan
             </h2>
             <p className="text-sm text-muted-foreground">
-              Submit your repo. Get launch-risk clarity. Fix what matters first.
+              Prefer self-serve checkout? Start with Quick Triage in our Stripe pricing table above.
+              Use this intake form when you want custom scope, procurement notes, or onboarding help.
             </p>
           </div>
 
