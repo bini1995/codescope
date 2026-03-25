@@ -34,6 +34,7 @@ import {
   CheckCircle2,
   Users,
   FileText,
+  Download,
   Video,
   BookOpen,
   Rocket,
@@ -309,6 +310,68 @@ export default function Landing() {
     "Technical findings with file-level evidence and severity",
     "Prioritized remediation plan with immediate next actions",
     "Issue list export suitable for Jira/Linear handoff",
+    "Compliance-ready appendix mapped to SOC 2, NIST CSF 2.0, and EU AI Act controls",
+  ];
+
+  const methodologyLenses = [
+    {
+      title: "Security Lens",
+      detail:
+        "Identity boundaries, secrets, supply-chain risk, and abuse surfaces that can trigger incidents or customer trust loss.",
+      checks: ["AuthZ/AuthN gaps", "Secret leakage", "Unsafe defaults", "Threat exposure paths"],
+    },
+    {
+      title: "Quality Lens",
+      detail:
+        "Code health and delivery reliability checks that reveal hidden maintenance drag and brittle release workflows.",
+      checks: ["Dependency drift", "Test confidence depth", "CI/CD controls", "Operational guardrails"],
+    },
+    {
+      title: "Logic Lens",
+      detail:
+        "Business-rule correctness analysis focused on AI-generated implementation drift and high-cost edge cases.",
+      checks: ["Spec-to-code drift", "Duplicated rules", "Failure-mode handling", "State/flow consistency"],
+    },
+  ];
+
+  const complianceAlignments = [
+    {
+      standard: "SOC 2 readiness",
+      value: "Maps findings to security, availability, and change-management evidence expected in buyer diligence.",
+    },
+    {
+      standard: "NIST CSF 2.0 alignment",
+      value: "Translates findings into Govern, Protect, Detect, Respond, and Recover actions for practical risk governance.",
+    },
+    {
+      standard: "EU AI Act risk posture (2026)",
+      value: "Highlights documentation, traceability, and control gaps that can slow procurement and expansion in regulated markets.",
+    },
+  ];
+
+  const sampleReportSlices = [
+    {
+      title: "Founder Blockers",
+      description: "High-confidence blockers that can delay launch, sales, or investor diligence if unresolved.",
+      items: [
+        "Public admin mutation route lacks authorization checks",
+        "No incident rollback gate in production deployment workflow",
+        "Customer data export endpoint has no abuse throttling",
+      ],
+      badge: "Launch-critical",
+      badgeTone: "text-red-300 border-red-500/40 bg-red-500/10",
+    },
+    {
+      title: "Technical Debt",
+      description: "Non-blocking issues that compound risk and engineering cost if left unattended.",
+      items: [
+        "Duplicate validation logic across services causing policy drift",
+        "Flaky integration tests around asynchronous checkout retries",
+        "Inconsistent error models across API handlers and workers",
+      ],
+      badge: "Stability drag",
+      badgeTone: "text-amber-300 border-amber-500/40 bg-amber-500/10",
+    },
   ];
 
   const urgencyOffers = [
@@ -836,6 +899,37 @@ export default function Landing() {
         </div>
       </section>
 
+      <section className="pb-16 px-4 sm:px-6" data-testid="section-methodology">
+        <div className="max-w-6xl mx-auto rounded-md border border-primary/20 bg-primary/5 p-6 sm:p-8">
+          <div className="text-center mb-8">
+            <p className="text-xs uppercase tracking-wider text-primary/80 mb-2">Methodology</p>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-3">
+              Multi-Layer Analysis: Security + Quality + Logic
+            </h2>
+            <p className="text-sm text-muted-foreground max-w-3xl mx-auto">
+              Our SignalLens workflow combines three explicit lenses so audits catch technical risks
+              and business-impact blockers that generic scanners often miss.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {methodologyLenses.map((lens) => (
+              <div key={lens.title} className="rounded-md border border-border/40 bg-background/70 p-4">
+                <p className="text-sm font-semibold mb-1">{lens.title}</p>
+                <p className="text-xs text-muted-foreground mb-3 leading-relaxed">{lens.detail}</p>
+                <ul className="space-y-1.5 text-xs text-foreground/80">
+                  {lens.checks.map((check) => (
+                    <li key={check} className="flex items-start gap-2">
+                      <Check className="w-3.5 h-3.5 text-emerald-500 mt-0.5 flex-shrink-0" />
+                      <span>{check}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section id="how-it-works" className="pb-20 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-10">
@@ -1285,6 +1379,23 @@ export default function Landing() {
                 {showSampleReport ? "Hide Sample" : "View Sample"}
               </Button>
             </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                className="text-xs"
+                asChild
+                data-testid="button-download-sample-report"
+              >
+                <a href="/sample-audit-report.pdf" download>
+                  <Download className="w-3.5 h-3.5 mr-1" />
+                  Download Sample Audit PDF
+                </a>
+              </Button>
+              <p className="text-[11px] text-muted-foreground">
+                Includes severity rubric, evidence format, and remediation sequencing used in paid audits.
+              </p>
+            </div>
           </div>
           <div
             className={`grid transition-all duration-300 ease-out ${showSampleReport ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
@@ -1374,8 +1485,54 @@ export default function Landing() {
                     </div>
                   </div>
                 </div>
+
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {sampleReportSlices.map((slice) => (
+                    <div key={slice.title} className="rounded-lg border border-border/40 bg-background/60 p-3">
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <p className="text-sm font-semibold">{slice.title}</p>
+                        <span
+                          className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wider ${slice.badgeTone}`}
+                        >
+                          {slice.badge}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-2">{slice.description}</p>
+                      <ul className="space-y-1.5 text-xs text-foreground/90">
+                        {slice.items.map((item) => (
+                          <li key={item} className="flex items-start gap-2">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-primary mt-0.5 flex-shrink-0" />
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="pb-12 px-4 sm:px-6" data-testid="section-compliance-alignment">
+        <div className="max-w-6xl mx-auto rounded-md border border-border/40 bg-card/20 p-5 sm:p-6">
+          <div className="mb-4">
+            <p className="text-xs uppercase tracking-wider text-primary/80 mb-2">Compliance alignment</p>
+            <h3 className="text-lg font-semibold mb-1">
+              Audit output designed for security questionnaires and 2026 AI regulation pressure
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              We do not issue compliance certifications. We provide evidence-ready findings and control mappings that accelerate SOC 2, NIST, and EU AI Act readiness workstreams.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {complianceAlignments.map((item) => (
+              <div key={item.standard} className="rounded border border-border/40 bg-background/50 p-3">
+                <p className="text-xs font-semibold mb-1">{item.standard}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">{item.value}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
