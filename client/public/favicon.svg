@@ -1,0 +1,13 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="codeauditGradient" x1="10" y1="8" x2="54" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#38BDF8"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="#0B1220"/>
+  <path d="M32 10L48 16V30C48 40 41.6 49.2 32 53C22.4 49.2 16 40 16 30V16L32 10Z" fill="url(#codeauditGradient)" />
+  <path d="M26 27L22 31L26 35" stroke="#E2E8F0" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M38 27L42 31L38 35" stroke="#E2E8F0" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M34.5 23L29.5 39" stroke="#E2E8F0" stroke-width="3" stroke-linecap="round"/>
+</svg>
