@@ -51,6 +51,12 @@ const previewScanSchema = z.object({
   email: z.string().email(),
 });
 
+const riskAssessmentLeadSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  workEmail: z.string().trim().email(),
+  repoUrl: z.string().trim().url(),
+});
+
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
@@ -293,6 +299,22 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch {
       return res.status(502).json({ message: "Failed to contact GitHub" });
     }
+  });
+
+  app.post("/api/marketing/risk-assessment", async (req, res) => {
+    const parsed = riskAssessmentLeadSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: parsed.error.message });
+    }
+
+    console.info("[marketing] risk assessment lead captured", {
+      name: parsed.data.name,
+      workEmail: normalizeEmail(parsed.data.workEmail),
+      repoUrl: parsed.data.repoUrl,
+      receivedAt: new Date().toISOString(),
+    });
+
+    return res.status(202).json({ queued: true });
   });
 
   app.post("/api/scan/preview", previewScanRateLimit, async (req, res) => {

@@ -73,6 +73,7 @@ type RepoCheckPreview = {
 type MarketingComparison = { name: string; bestFor: string };
 type SampleReport = { title: string; focus: string };
 type AuditType = { key: string; label: string; outcome: string };
+type RiskAssessmentLead = { name: string; workEmail: string; repoUrl: string };
 
 const STRIPE_PAYMENT_LINKS = {
   instantSignal: "https://buy.stripe.com/8x28wQ3N87f0bQIfYY",
@@ -98,6 +99,11 @@ export default function Landing() {
   const [authForm, setAuthForm] = useState({ fullName: "", email: "", password: "" });
   const [showSampleReport, setShowSampleReport] = useState(false);
   const [previewRepoUrl, setPreviewRepoUrl] = useState("");
+  const [riskAssessmentForm, setRiskAssessmentForm] = useState<RiskAssessmentLead>({
+    name: "",
+    workEmail: "",
+    repoUrl: "",
+  });
 
   const { data: repos } = useQuery<GHRepo[]>({
     queryKey: ["/api/github/repos"],
@@ -147,6 +153,27 @@ export default function Landing() {
       toast({
         title: "Preview queued",
         description: "We’ll email your preview in 2 hours while we verify repository access.",
+      });
+    },
+  });
+
+  const riskAssessmentMutation = useMutation({
+    mutationFn: async (payload: RiskAssessmentLead) => {
+      const response = await apiRequest("POST", "/api/marketing/risk-assessment", payload);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Assessment requested",
+        description: "We’ll send your free 5-minute risk assessment summary shortly.",
+      });
+      setRiskAssessmentForm({ name: "", workEmail: "", repoUrl: "" });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Request failed",
+        description: error.message,
+        variant: "destructive",
       });
     },
   });
@@ -210,34 +237,19 @@ export default function Landing() {
 
   const navItems: Array<{ label: string; onClick: () => void; testId: string }> = [
     {
-      label: "How It Works",
-      onClick: () => handleCtaClick("How It Works", "top_nav", () => scrollToSection("how-it-works")),
-      testId: "link-how-it-works",
-    },
-    {
-      label: "Pricing",
-      onClick: () => handleCtaClick("Pricing", "top_nav", () => scrollToSection("pricing")),
-      testId: "link-pricing",
-    },
-    {
-      label: "Sample Report",
-      onClick: () => handleCtaClick("Sample Report", "top_nav", () => scrollToSection("sample-report")),
-      testId: "link-sample-report",
-    },
-    {
-      label: "Blog",
-      onClick: () =>
-        handleCtaClick("Blog", "top_nav", () => {
-          toast({ title: "Blog coming soon", description: "We’re publishing technical breakdowns soon." });
-        }),
-      testId: "link-blog",
-    },
-    {
-      label: "Login",
-      onClick: () => handleCtaClick("Login", "top_nav", () => navigate("/dashboard")),
-      testId: "link-login",
+      label: "Get My Audit",
+      onClick: () => handleCtaClick("Get My Audit", "top_nav", () => scrollToSection("pricing")),
+      testId: "link-get-my-audit",
     },
   ];
+
+  const buildPrefilledCheckoutLink = (baseLink: string, planName: string) => {
+    const checkoutUrl = new URL(baseLink);
+    const candidateEmail = user?.email || formData.contactEmail || riskAssessmentForm.workEmail;
+    if (candidateEmail) checkoutUrl.searchParams.set("prefilled_email", candidateEmail);
+    checkoutUrl.searchParams.set("client_reference_id", `${planName.toLowerCase().replace(/\s+/g, "-")}-landing`);
+    return checkoutUrl.toString();
+  };
 
   const valueBlocks = [
     {
@@ -679,10 +691,10 @@ export default function Landing() {
             className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] mb-6"
             data-testid="text-hero-title"
           >
-            Get clarity on
+            We find the 30% of architectural flaws that automated scanners miss
             <br />
             <span className="bg-gradient-to-r from-primary via-blue-400 to-cyan-400 bg-clip-text text-transparent">
-              what matters first
+              before they become launch blockers
             </span>
           </h1>
 
@@ -705,18 +717,18 @@ export default function Landing() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-7">
             <Button size="lg" asChild data-testid="button-start-audit">
               <a
-                href={STRIPE_PAYMENT_LINKS.instantSignal}
+                href={buildPrefilledCheckoutLink(STRIPE_PAYMENT_LINKS.instantSignal, "Instant Signal")}
                 target="_blank"
                 rel="noreferrer"
                 onClick={() => handleCtaClick("Start $99 Basic Triage", "hero")}
               >
-                Start $99 Basic Triage
+                Get My Audit
                 <ArrowRight className="w-4 h-4 ml-1.5" />
               </a>
             </Button>
             <Button variant="outline" size="lg" asChild data-testid="button-guided-review">
               <a
-                href={STRIPE_PAYMENT_LINKS.guidedReview}
+                href={buildPrefilledCheckoutLink(STRIPE_PAYMENT_LINKS.guidedReview, "Guided Review")}
                 target="_blank"
                 rel="noreferrer"
                 onClick={() => handleCtaClick("Book $499 Review", "hero")}
@@ -1295,7 +1307,7 @@ export default function Landing() {
                   data-testid={`button-pricing-${tier.name.toLowerCase()}`}
                 >
                   <a
-                    href={tier.paymentLink}
+                    href={buildPrefilledCheckoutLink(tier.paymentLink, tier.name)}
                     target="_blank"
                     rel="noreferrer"
                     onClick={() => handleCtaClick(tier.cta, "pricing")}
@@ -1373,6 +1385,61 @@ export default function Landing() {
           >
             14-day money-back on all plans.
           </p>
+
+          <div className="mt-8 rounded-md border border-amber-500/30 bg-amber-500/5 p-5">
+            <div className="mb-4">
+              <p className="text-xs uppercase tracking-wider text-amber-300 mb-1">
+                Not ready to book?
+              </p>
+              <h3 className="text-base font-semibold">Get a Free 5-minute Risk Assessment</h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Share your details and repo URL—our team sends a focused risk snapshot so you can decide your next step.
+              </p>
+            </div>
+            <form
+              className="grid grid-cols-1 gap-3 md:grid-cols-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                riskAssessmentMutation.mutate(riskAssessmentForm);
+              }}
+              data-testid="form-risk-assessment"
+            >
+              <Input
+                required
+                placeholder="Name"
+                value={riskAssessmentForm.name}
+                onChange={(event) =>
+                  setRiskAssessmentForm((prev) => ({ ...prev, name: event.target.value }))
+                }
+                data-testid="input-risk-assessment-name"
+              />
+              <Input
+                required
+                type="email"
+                placeholder="Work Email"
+                value={riskAssessmentForm.workEmail}
+                onChange={(event) =>
+                  setRiskAssessmentForm((prev) => ({ ...prev, workEmail: event.target.value }))
+                }
+                data-testid="input-risk-assessment-email"
+              />
+              <Input
+                required
+                type="url"
+                placeholder="GitHub Repo URL"
+                value={riskAssessmentForm.repoUrl}
+                onChange={(event) =>
+                  setRiskAssessmentForm((prev) => ({ ...prev, repoUrl: event.target.value }))
+                }
+                data-testid="input-risk-assessment-repo"
+              />
+              <div className="md:col-span-3">
+                <Button type="submit" disabled={riskAssessmentMutation.isPending} className="w-full sm:w-auto">
+                  {riskAssessmentMutation.isPending ? "Submitting..." : "Send Free 5-minute Risk Assessment"}
+                </Button>
+              </div>
+            </form>
+          </div>
 
           <div
             className="mt-8 rounded-md border border-border/40 bg-card/20 p-5"
