@@ -2,6 +2,15 @@ import { getUncachableGitHubClient } from "./github";
 import { storage } from "./storage";
 import type { InsertFinding, RepoMeta, FileTreeItem, ScanLogEntry } from "@shared/schema";
 import { SCAN_LIMITS } from "@shared/scan-limits";
+import {
+  assessDriftWithLlm,
+  fetchPullRequestContext,
+  parseGitHubIssueRef,
+  parseGitHubPullRef,
+  proposeRemediationPatch,
+  retrieveContextDocuments,
+  runRegistryLookup,
+} from "./prAuditInfra";
 
 const SECRET_PATTERNS = [
   { pattern: /(?:sk_live_|sk_test_)[a-zA-Z0-9]{20,}/g, name: "Stripe Secret Key", severity: "critical" as const },
@@ -298,6 +307,11 @@ export async function scanRepository(auditId: string): Promise<void> {
     }
 
     const allFindings: Omit<InsertFinding, "auditId">[] = [];
+    let remediationPullRequestDraft: {
+      title: string;
+      body: string;
+      patch: string;
+    } | null = null;
 
     const files = tree.filter((t) => t.type === "file");
     if (files.length > SCAN_LIMITS.maxFilesToScan) {
@@ -597,6 +611,125 @@ export async function scanRepository(auditId: string): Promise<void> {
       }
     }
 
+    const concernText = `${audit.biggestConcern || ""} ${audit.repoUrl || ""}`;
+    const pullRef = parseGitHubPullRef(concernText);
+    if (pullRef) {
+      addLog("pr_context", "ok", `Detected PR scope: ${pullRef.owner}/${pullRef.repo}#${pullRef.pullNumber}`);
+      const explicitIssueRef = parseGitHubIssueRef(concernText);
+      const prContext = await fetchPullRequestContext(octokit as any, pullRef, explicitIssueRef);
+      if (prContext) {
+        const changedFiles = prContext.changedFiles.map((f) => f.filename);
+        const docs = await retrieveContextDocuments(octokit as any, pullRef.owner, pullRef.repo, tree, changedFiles);
+        addLog("contextual_retrieval", "ok", `Retrieved ${docs.length} schema/docs context files for PR review`);
+
+        try {
+          const { data } = await octokit.repos.getContent({ owner: pullRef.owner, repo: pullRef.repo, path: "package.json" });
+          if ("content" in data && data.encoding === "base64") {
+            const pkg = JSON.parse(Buffer.from(data.content, "base64").toString("utf-8"));
+            const deps = { ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) };
+            const scaFindings = await runRegistryLookup(deps);
+            if (scaFindings.length > 0) {
+              allFindings.push({
+                category: "security",
+                severity: scaFindings.some((f) => f.risk === "high") ? "high" : "medium",
+                title: "Software composition analysis surfaced dependency risk",
+                description: scaFindings
+                  .slice(0, 5)
+                  .map((f) => `${f.packageName}@${f.currentVersion} -> ${f.latestVersion || "unknown"} (${f.reason})`)
+                  .join("; "),
+                filePath: "package.json",
+                lineStart: null,
+                lineEnd: null,
+                codeSnippet: null,
+                businessImpact: "Outdated dependencies can introduce known CVEs and reliability regressions during release.",
+                fixSteps: "Upgrade high-risk dependencies first, run tests, and pin lockfile updates in the same PR.",
+                effort: "M",
+                status: "open",
+                autoDetected: true,
+              });
+              addLog("sca", "warn", `SCA found ${scaFindings.length} dependency upgrade risks`);
+            } else {
+              addLog("sca", "ok", "SCA registry lookup found no major dependency drift");
+            }
+          }
+        } catch {
+          addLog("sca", "warn", "SCA registry lookup failed; continuing with static findings");
+        }
+
+        const llmKey = process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY;
+        if (llmKey && prContext.linkedIssue) {
+          const diffBlob = prContext.changedFiles
+            .map((f) => `File: ${f.filename}\n${f.patch || "(no patch)"}`)
+            .join("\n\n");
+          const drift = await assessDriftWithLlm({
+            apiKey: llmKey,
+            issueTitle: prContext.linkedIssue.title,
+            issueBody: prContext.linkedIssue.body,
+            prTitle: prContext.pull.title,
+            prDiff: diffBlob,
+            docs,
+          });
+
+          if (drift?.driftDetected) {
+            allFindings.push({
+              category: "maintainability",
+              severity: drift.confidence === "high" ? "high" : "medium",
+              title: "PR-to-Issue drift detected by LLM",
+              description: drift.rationale,
+              filePath: null,
+              lineStart: null,
+              lineEnd: null,
+              codeSnippet: drift.missingGoals.join("\n") || null,
+              businessImpact: "Feature drift burns engineering time and can ship changes that miss core business outcomes.",
+              fixSteps: "Re-align PR acceptance criteria to issue goals before merge.",
+              effort: "S",
+              status: "open",
+              autoDetected: true,
+            });
+            addLog("drift_check", "warn", `LLM detected business-goal drift with ${drift.confidence} confidence`);
+          } else {
+            addLog("drift_check", "ok", "LLM drift check did not detect material deviation from linked issue");
+          }
+        }
+
+        const topFixable = allFindings.find((f) => !!f.filePath && !!f.fixSteps);
+        if (llmKey && topFixable) {
+          const remediation = await proposeRemediationPatch({
+            apiKey: llmKey,
+            finding: topFixable,
+            prContext,
+            docs,
+          });
+          if (remediation?.patch) {
+            remediationPullRequestDraft = {
+              title: remediation.prTitle,
+              body: remediation.prBody,
+              patch: remediation.patch,
+            };
+
+            allFindings.push({
+              category: "maintainability",
+              severity: "medium",
+              title: "Remediation Engine generated exact PR patch",
+              description: `Draft PR "${remediation.prTitle}" is ready with a concrete unified diff for ${topFixable.filePath}.`,
+              filePath: topFixable.filePath,
+              lineStart: topFixable.lineStart ?? null,
+              lineEnd: topFixable.lineEnd ?? null,
+              codeSnippet: remediation.patch.slice(0, 2000),
+              businessImpact: "Teams can move from detection to implementation faster by starting from an exact patch proposal.",
+              fixSteps: "Review the proposed unified diff, run tests, and open the draft PR for engineering review.",
+              effort: "S",
+              status: "open",
+              autoDetected: true,
+            });
+            addLog("remediation_engine", "ok", "Generated exact code-change PR draft from top finding");
+          }
+        }
+      } else {
+        addLog("pr_context", "warn", "Unable to fetch PR context; skipping PR-specific infra checks");
+      }
+    }
+
     const deduped = deduplicateFindings(allFindings);
     for (const finding of deduped) {
       await storage.createFinding({ ...finding, auditId });
@@ -606,6 +739,21 @@ export async function scanRepository(auditId: string): Promise<void> {
     const summary = generateSummary(audit.ownerName, audit.repoName, deduped, scores);
     const llmSummary = await generateLlmSummary(audit.ownerName, audit.repoName, deduped, scores);
     const plan = generateRemediationPlan(deduped);
+    const enrichedPlan = remediationPullRequestDraft
+      ? [
+          {
+            phase: "Automated Remediation PR",
+            days: "Now",
+            tasks: [
+              remediationPullRequestDraft.title,
+              "Apply and validate the proposed unified diff",
+              "Open the generated PR draft for reviewer sign-off",
+            ],
+            pullRequestDraft: remediationPullRequestDraft,
+          },
+          ...plan,
+        ]
+      : plan;
 
     addLog("complete", "ok", `Scan complete: ${deduped.length} findings, ${Object.values(scores).reduce((a, b) => a + b, 0) / 5} avg score`);
 
@@ -613,7 +761,7 @@ export async function scanRepository(auditId: string): Promise<void> {
       status: "complete",
       ...scores,
       executiveSummary: llmSummary || summary,
-      remediationPlan: plan,
+      remediationPlan: enrichedPlan,
       scanLog: log,
       scannedAt: new Date(),
     });
