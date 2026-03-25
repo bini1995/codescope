@@ -509,17 +509,18 @@ export default function Landing() {
 
   const pricingTiers = [
     {
-      name: "Instant Signal",
+      name: "Basic Triage",
       price: "$99",
-      desc: "Fast scanner-backed launch signal that creates immediate remediation urgency",
+      desc: "Low-friction entry point with expert-prioritized risk signal before a full audit",
       features: [
         "Automated scan snapshot in hours, not days",
+        "One-file free security scan available before purchase",
         "Top launch blockers preview (counts + category)",
         "Clear upgrade trigger: unlock exact file-level remediation plan",
         "Best entry point before investing in expert review",
         'Example output: "4 launch blockers, 11 medium-risk issues, weak auth boundaries"',
       ],
-      cta: "Start $99 Signal",
+      cta: "Start $99 Basic Triage",
       popular: false,
       paymentLink: STRIPE_PAYMENT_LINKS.instantSignal,
     },
@@ -698,7 +699,7 @@ export default function Landing() {
           </p>
 
           <p className="text-sm text-amber-300 mb-8" data-testid="text-hero-offer-line">
-            First 10 customers: $99 Instant Signal (normally $499) • Delivered in &lt;24h
+            First 10 customers: $99 Basic Triage (normally $499) • Delivered in &lt;24h
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-7">
@@ -707,9 +708,9 @@ export default function Landing() {
                 href={STRIPE_PAYMENT_LINKS.instantSignal}
                 target="_blank"
                 rel="noreferrer"
-                onClick={() => handleCtaClick("Start $99 Signal", "hero")}
+                onClick={() => handleCtaClick("Start $99 Basic Triage", "hero")}
               >
-                Start $99 Signal
+                Start $99 Basic Triage
                 <ArrowRight className="w-4 h-4 ml-1.5" />
               </a>
             </Button>
@@ -1155,10 +1156,10 @@ export default function Landing() {
                 data-testid="instant-scan-breakdown"
               >
                 <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
-                  $99 Instant Scan
+                  Free 1-file scan + $99 Basic Triage
                 </p>
                 <p className="text-xs text-foreground/80 mb-2">
-                  Automated urgency signal with issue counts and risk themes.
+                  Automated urgency signal with issue counts and risk themes for fast first validation.
                 </p>
                 <p className="text-[11px] text-muted-foreground">Turnaround: typically same day.</p>
               </div>
@@ -1196,6 +1197,60 @@ export default function Landing() {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="pb-14 px-4 sm:px-6" data-testid="section-risk-cost">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-4">
+          <div className="rounded-md border border-red-500/30 bg-red-500/5 p-5">
+            <p className="text-xs uppercase tracking-wider text-red-300 mb-2">
+              ROI calculator: risk cost framing
+            </p>
+            <h3 className="text-lg font-semibold mb-2">The Cost of a Hallucinated Dependency</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              One malicious AI-suggested package can become a six-figure incident. If a compromised dependency
+              exfiltrates credentials, triggers downtime, or leaks customer data, the total impact can exceed
+              $100,000 before legal, remediation, and reputational damage are fully counted.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              {[
+                "Incident response + engineering fire drill: $20k–$40k",
+                "Customer notifications, legal review, and reporting: $15k–$30k",
+                "Revenue impact from downtime and churn: $30k–$60k",
+                "Trust and procurement delays after breach disclosure: hard to quantify",
+              ].map((item) => (
+                <div key={item} className="rounded border border-red-400/20 bg-background/60 p-3">
+                  {item}
+                </div>
+              ))}
+            </div>
+            <p className="text-sm mt-4">
+              Compared to a <span className="font-semibold">$499–$3,000 audit</span>, proactive review is usually
+              the cheaper decision.
+            </p>
+          </div>
+
+          <div className="rounded-md border border-primary/30 bg-primary/5 p-5">
+            <p className="text-xs uppercase tracking-wider text-primary/80 mb-2">Human verification guarantee</p>
+            <h3 className="text-base font-semibold mb-2">Not just another scanner output</h3>
+            <p className="text-sm text-muted-foreground mb-3">
+              <span className="font-semibold text-foreground">
+                Every audit is verified by a Senior Engineer, not just another AI.
+              </span>{" "}
+              You get expert judgment on exploitability, business impact, and what to fix first.
+            </p>
+            <div className="rounded border border-border/40 bg-background/60 p-3 text-xs text-muted-foreground">
+              Automated tooling powers speed; expert signature provides confidence for founder, CTO, and buyer conversations.
+            </div>
+            <Button
+              className="w-full mt-4"
+              variant="outline"
+              onClick={() => handleCtaClick("Try Free 1-File Scan", "risk_cost", handleInstantPreview)}
+              data-testid="button-free-one-file-scan"
+            >
+              Try Free 1-File Scan
+            </Button>
           </div>
         </div>
       </section>
