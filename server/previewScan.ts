@@ -26,6 +26,19 @@ export type PreviewScanResult = {
   gitleaksMatches: Array<{ filePath: string; detector: string; severity: string; count: number }>;
 };
 
+export type FreeRiskScanResult = {
+  fullName: string;
+  defaultBranch: string;
+  filesScanned: number;
+  scanDurationMs: number;
+  criticalFinding: {
+    title: string;
+    severity: "critical" | "high";
+    filePath: string;
+    evidenceCount: number;
+  };
+};
+
 export function parseGitHubRepo(url: string): { owner: string; repo: string } | null {
   const normalized = url.trim().replace(/\.git$/, "");
   const match = normalized.match(/^https?:\/\/github\.com\/([^\/]+)\/([^\/]+)$/i);
@@ -37,16 +50,44 @@ function decodeGitHubContent(content: string): string {
   return Buffer.from(content, "base64").toString("utf8");
 }
 
+function rankSeverity(severity: string): number {
+  if (severity === "critical") return 0;
+  if (severity === "high") return 1;
+  if (severity === "medium") return 2;
+  return 3;
+}
+
+function buildSingleCriticalFinding(result: PreviewScanResult): FreeRiskScanResult["criticalFinding"] | null {
+  const prioritized = [
+    ...result.gitleaksMatches.map((match) => ({
+      title: match.detector,
+      severity: match.severity as "critical" | "high",
+      filePath: match.filePath,
+      evidenceCount: match.count,
+    })),
+    ...result.semgrepMatches
+      .filter((match) => match.severity === "critical" || match.severity === "high")
+      .map((match) => ({
+        title: match.rule,
+        severity: match.severity as "critical" | "high",
+        filePath: match.filePath,
+        evidenceCount: match.count,
+      })),
+  ].sort((a, b) => rankSeverity(a.severity) - rankSeverity(b.severity) || b.evidenceCount - a.evidenceCount);
+
+  return prioritized[0] ?? null;
+}
+
 export async function runPreviewScan(input: {
   repoUrl: string;
-  githubToken: string;
+  githubToken?: string;
 }): Promise<PreviewScanResult> {
   const parsed = parseGitHubRepo(input.repoUrl);
   if (!parsed) {
     throw new Error("Provide a valid GitHub repository URL");
   }
 
-  const octokit = new Octokit({ auth: input.githubToken });
+  const octokit = input.githubToken ? new Octokit({ auth: input.githubToken }) : new Octokit();
   const { owner, repo } = parsed;
 
   const { data: repoData } = await octokit.repos.get({ owner, repo });
@@ -111,5 +152,26 @@ export async function runPreviewScan(input: {
     repoSizeKb: repoData.size,
     semgrepMatches,
     gitleaksMatches,
+  };
+}
+
+export async function runFreeRiskScan(input: { repoUrl: string; githubToken?: string }): Promise<FreeRiskScanResult> {
+  const startedAt = Date.now();
+  const preview = await runPreviewScan({
+    repoUrl: input.repoUrl,
+    githubToken: input.githubToken || process.env.GITHUB_TOKEN || "",
+  });
+  const criticalFinding = buildSingleCriticalFinding(preview);
+
+  if (!criticalFinding) {
+    throw new Error("No critical or high-severity flaw found in quick scan window");
+  }
+
+  return {
+    fullName: preview.fullName,
+    defaultBranch: preview.defaultBranch,
+    filesScanned: preview.filesScanned,
+    scanDurationMs: Date.now() - startedAt,
+    criticalFinding,
   };
 }

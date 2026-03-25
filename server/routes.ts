@@ -12,7 +12,7 @@ import { submitAuditSchema, updateAuditSchema } from "./auditSchemas";
 import { db } from "./db";
 import { buildAuditBusinessAssets } from "./auditArtifacts";
 import { createRateLimit } from "./rateLimit";
-import { parseGitHubRepo, runPreviewScan } from "./previewScan";
+import { parseGitHubRepo, runFreeRiskScan, runPreviewScan } from "./previewScan";
 import { buildPreviewPdf, emailPreviewPdf } from "./previewDelivery";
 import { sql } from "drizzle-orm";
 import {
@@ -54,6 +54,10 @@ const previewScanSchema = z.object({
 const riskAssessmentLeadSchema = z.object({
   name: z.string().trim().min(1).max(120),
   workEmail: z.string().trim().email(),
+  repoUrl: z.string().trim().url(),
+});
+
+const freeRiskScanSchema = z.object({
   repoUrl: z.string().trim().url(),
 });
 
@@ -107,6 +111,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     windowMs: 60_000,
     max: 5,
     message: "Too many preview scan requests. Try again in a minute.",
+  });
+  const freeRiskScanRateLimit = createRateLimit({
+    windowMs: 60_000,
+    max: 4,
+    message: "Too many free scan requests. Try again in a minute.",
   });
 
   app.post("/api/auth/register", async (req, res) => {
@@ -315,6 +324,23 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     });
 
     return res.status(202).json({ queued: true });
+  });
+
+  app.post("/api/marketing/free-risk-scan", freeRiskScanRateLimit, async (req, res) => {
+    const parsed = freeRiskScanSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
+
+    const repo = parseGitHubRepo(parsed.data.repoUrl);
+    if (!repo) return res.status(400).json({ message: "Provide a valid GitHub repository URL" });
+
+    try {
+      const result = await runFreeRiskScan({ repoUrl: parsed.data.repoUrl });
+      return res.json(result);
+    } catch (error: any) {
+      const message = typeof error?.message === "string" ? error.message : "Free scan failed";
+      const status = /valid GitHub repository URL|No critical or high-severity/i.test(message) ? 400 : 502;
+      return res.status(status).json({ message });
+    }
   });
 
   app.post("/api/scan/preview", previewScanRateLimit, async (req, res) => {

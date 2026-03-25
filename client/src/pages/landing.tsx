@@ -60,14 +60,17 @@ type GHRepo = {
   updatedAt: string;
 };
 
-type RepoCheckPreview = {
+type FreeRiskScanResult = {
   fullName: string;
-  stars: number;
-  forks: number;
-  language: string | null;
-  openIssues: number;
   defaultBranch: string;
-  businessContext: string;
+  filesScanned: number;
+  scanDurationMs: number;
+  criticalFinding: {
+    title: string;
+    severity: "critical" | "high";
+    filePath: string;
+    evidenceCount: number;
+  };
 };
 
 type MarketingComparison = { name: string; bestFor: string };
@@ -144,15 +147,15 @@ export default function Landing() {
     },
   });
 
-  const repoPreviewMutation = useMutation({
+  const freeRiskScanMutation = useMutation({
     mutationFn: async (repoUrl: string) => {
-      const response = await apiRequest("POST", "/api/marketing/repo-check", { repoUrl });
-      return (await response.json()) as RepoCheckPreview;
+      const response = await apiRequest("POST", "/api/marketing/free-risk-scan", { repoUrl });
+      return (await response.json()) as FreeRiskScanResult;
     },
     onError: () => {
       toast({
-        title: "Preview queued",
-        description: "We’ll email your preview in 2 hours while we verify repository access.",
+        title: "No critical flaw found in quick scan",
+        description: "Try another public repo or book the full $499 audit for deeper findings.",
       });
     },
   });
@@ -227,7 +230,7 @@ export default function Landing() {
     }
 
     handleCtaClick("Try Instant Preview", "hero_preview", () => {
-      repoPreviewMutation.mutate(previewRepoUrl.trim());
+      freeRiskScanMutation.mutate(previewRepoUrl.trim());
     });
   };
 
@@ -791,7 +794,7 @@ export default function Landing() {
 
           <div className="mx-auto mb-12 max-w-2xl rounded-md border border-cyan-500/30 bg-slate-950/60 p-4 text-left shadow-[0_0_40px_rgba(14,116,144,0.2)]">
             <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="text-[11px] uppercase tracking-[0.2em] text-cyan-300/80">Try Instant Preview</p>
+              <p className="text-[11px] uppercase tracking-[0.2em] text-cyan-300/80">Free 5-Minute Risk Scan</p>
               <Sparkles className="h-4 w-4 text-cyan-300/80" />
             </div>
 
@@ -806,31 +809,38 @@ export default function Landing() {
               <Button
                 type="button"
                 onClick={handleInstantPreview}
-                disabled={repoPreviewMutation.isPending}
+                disabled={freeRiskScanMutation.isPending}
                 className="sm:w-auto"
                 data-testid="button-instant-preview-submit"
               >
-                {repoPreviewMutation.isPending ? "Checking..." : "Run Preview"}
+                {freeRiskScanMutation.isPending ? "Scanning..." : "Run 10-second Free Scan"}
               </Button>
             </div>
 
-            {repoPreviewMutation.data ? (
+            {freeRiskScanMutation.data ? (
               <div className="space-y-1.5 font-mono text-xs text-cyan-100/80" data-testid="instant-preview-result">
-                <p>$ scan {repoPreviewMutation.data.fullName}</p>
+                <p>$ scan --quick {freeRiskScanMutation.data.fullName}</p>
+                <p className="text-cyan-200">✓ Completed in {(freeRiskScanMutation.data.scanDurationMs / 1000).toFixed(1)}s</p>
                 <p className="text-cyan-200">
-                  ✓ {repoPreviewMutation.data.language || "Mixed"} codebase • {repoPreviewMutation.data.defaultBranch} branch
+                  ✓ {freeRiskScanMutation.data.filesScanned} files scanned on {freeRiskScanMutation.data.defaultBranch}
                 </p>
-                <p className="text-cyan-200">
-                  ✓ {repoPreviewMutation.data.stars.toLocaleString()} stars • {repoPreviewMutation.data.forks.toLocaleString()} forks
+                <p className="text-red-300">
+                  ! {freeRiskScanMutation.data.criticalFinding.severity.toUpperCase()} flaw: {freeRiskScanMutation.data.criticalFinding.title}
                 </p>
-                <p className="text-amber-200">! {repoPreviewMutation.data.businessContext}</p>
+                <p className="text-amber-200">
+                  ! File: {freeRiskScanMutation.data.criticalFinding.filePath} ({freeRiskScanMutation.data.criticalFinding.evidenceCount} hit
+                  {freeRiskScanMutation.data.criticalFinding.evidenceCount > 1 ? "s" : ""})
+                </p>
+                <p className="pt-1 text-cyan-100/90">
+                  → Want the full fix sequence? Book the full $499 audit and get a prioritized remediation roadmap.
+                </p>
               </div>
             ) : (
               <div className="space-y-1.5 font-mono text-xs text-cyan-100/80" data-testid="instant-preview-placeholder">
-                <p>$ upload repo github.com/acme/ai-assistant</p>
-                <p className="text-cyan-200">✓ Secret scan initialized</p>
-                <p className="text-cyan-200">✓ Dependency risk graph generated</p>
-                <p className="text-amber-200">! We’ll email you the preview in 2 hours if live fetch is unavailable</p>
+                <p>$ connect public repo github.com/acme/ai-assistant</p>
+                <p className="text-cyan-200">✓ 10-second automated quick scan</p>
+                <p className="text-cyan-200">✓ Reveals one critical/high flaw for free</p>
+                <p className="text-amber-200">! Bridge the trust gap before committing to the full $499 audit</p>
               </div>
             )}
           </div>
